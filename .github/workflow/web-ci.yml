@@ -1,0 +1,179 @@
+name: Web Frontend CI
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'package*.json'
+      - 'deployment/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'package*.json'
+  workflow_dispatch:
+
+env:
+  ACR_NAME: acrdigitalgarage03
+  IMAGE_NAME: hiorder/frontend
+  MANIFEST_REPO: dg04-hi/hi-manifest
+  
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Node.js 18
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Cache npm packages
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.npm
+          node_modules
+        key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-npm-
+          
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run tests
+      run: npm test -- --coverage --watchAll=false
+      
+    - name: Build application
+      run: npm run build
+      
+    - name: Generate build timestamp
+      id: timestamp
+      run: echo "BUILD_TIME=$(date +'%y%m%d%H%M')" >> $GITHUB_OUTPUT
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Log in to Azure Container Registry
+      uses: azure/docker-login@v1
+      with:
+        login-server: ${{ env.ACR_NAME }}.azurecr.io
+        username: ${{ secrets.ACR_USERNAME }}
+        password: ${{ secrets.ACR_PASSWORD }}
+        
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./deployment/container/Dockerfile
+        platforms: linux/amd64
+        push: true
+        tags: |
+          ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ steps.timestamp.outputs.BUILD_TIME }}
+          ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        
+    - name: Output image tags
+      run: |
+        echo "🎉 Frontend Image pushed successfully!"
+        echo "📦 Image: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}"
+        echo "🏷️  Tags: ${{ steps.timestamp.outputs.BUILD_TIME }}, latest"
+        
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: web-test-results
+        path: coverage/
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      if: success()
+      with:
+        name: web-build
+        path: build/
+
+  update-manifest:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Generate build timestamp
+      id: timestamp
+      run: echo "BUILD_TIME=$(date +'%y%m%d%H%M')" >> $GITHUB_OUTPUT
+      
+    - name: Checkout manifest repository
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ env.MANIFEST_REPO }}
+        token: ${{ secrets.MANIFEST_TOKEN }}
+        path: manifest-repo
+        
+    - name: Update Kubernetes manifest
+      run: |
+        cd manifest-repo/web
+        
+        echo "🔄 Updating web deployment manifest..."
+        
+        # deployment.yaml의 이미지 태그 업데이트 (기존 패턴과 동일)
+        sed -i "s|image: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:.*|image: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ steps.timestamp.outputs.BUILD_TIME }}|g" deployment.yaml
+        
+        # 변경사항 확인
+        echo "📋 Updated deployment.yaml:"
+        grep "image:" deployment.yaml | head -5
+        
+    - name: Commit and push manifest changes
+      run: |
+        cd manifest-repo
+        
+        echo "📝 Committing manifest changes..."
+        
+        # Git 설정 (기존 패턴과 동일)
+        git config --local user.email "wjsgksdnf11@naver.com"
+        git config --local user.name "hanwool77"
+        
+        # 변경사항 확인 후 커밋
+        git add web/deployment.yaml
+        
+        if git diff --staged --quiet; then
+          echo "📋 No changes to commit"
+        else
+          git commit -m "🚀 Update web frontend image to ${{ steps.timestamp.outputs.BUILD_TIME }}
+
+          - Image: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ steps.timestamp.outputs.BUILD_TIME }}
+          - Source commit: ${{ github.sha }}
+          - Triggered by: ${{ github.actor }}
+          - Repository: ${{ github.repository }}"
+          
+          echo "📤 Pushing changes to manifest repository..."
+          git push
+          
+          echo "✅ Web manifest updated successfully!"
+        fi
+        
+    - name: Create deployment summary
+      run: |
+        echo "## 🚀 Web Frontend Deployment Summary" >> $GITHUB_STEP_SUMMARY
+        echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
+        echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+        echo "| **Service** | Web Frontend |" >> $GITHUB_STEP_SUMMARY
+        echo "| **Image Tag** | \`${{ steps.timestamp.outputs.BUILD_TIME }}\` |" >> $GITHUB_STEP_SUMMARY
+        echo "| **Full Image** | \`${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ steps.timestamp.outputs.BUILD_TIME }}\` |" >> $GITHUB_STEP_SUMMARY
+        echo "| **Source Commit** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+        echo "| **Branch** | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+        echo "| **Manifest Path** | \`web/deployment.yaml\` |" >> $GITHUB_STEP_SUMMARY
+        echo "| **ArgoCD** | [Check Deployment](https://argo.20.249.191.180.nip.io) |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🔄 Next Steps" >> $GITHUB_STEP_SUMMARY
+        echo "1. ArgoCD will automatically detect the manifest changes" >> $GITHUB_STEP_SUMMARY
+        echo "2. New pods will be deployed to \`ns-hiorder\` namespace" >> $GITHUB_STEP_SUMMARY
+        echo "3. Check deployment status in ArgoCD UI" >> $GITHUB_STEP_SUMMARY
