@@ -4,11 +4,11 @@ metadata:
   name: frontend-config
   namespace: ns-hiorder
 data:
-  AUTH_SERVICE_URL: "http://member-service.ns-hiorder.svc.cluster.local:8081"
-  MEMBER_SERVICE_URL: "http://member-service.ns-hiorder.svc.cluster.local:8081"
-  STORE_SERVICE_URL: "http://store-service.ns-hiorder.svc.cluster.local:8082"
-  REVIEW_SERVICE_URL: "http://review-service.ns-hiorder.svc.cluster.local:8083"
-  ANALYTICS_SERVICE_URL: "http://analytics-service.ns-hiorder.svc.cluster.local:8084"
-  RECOMMEND_SERVICE_URL: "http://recommend-service.ns-hiorder.svc.cluster.local:8085"
-  API_GATEWAY_URL: "http://hiorder-gateway.ns-hiorder.svc.cluster.local"
+  # hi-web 스타일 URL 설정 (ingress host 기반)
+  AUTH_SERVICE_URL: "http://20.1.2.3/auth"
+  MEMBER_SERVICE_URL: "http://20.1.2.3/member"
+  STORE_SERVICE_URL: "http://20.1.2.3/store"
+  REVIEW_SERVICE_URL: "http://20.1.2.3/review"
+  ANALYTICS_SERVICE_URL: "http://20.1.2.3/analytics"
+  RECOMMEND_SERVICE_URL: "http://20.1.2.3/recommend"
   ENVIRONMENT: "production"
