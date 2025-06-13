@@ -1,3 +1,4 @@
+# deployment/container/Dockerfile (수정된 버전)
 FROM node:18-alpine AS builder
 
 WORKDIR /app
@@ -5,8 +6,8 @@ WORKDIR /app
 # package.json과 package-lock.json 복사
 COPY package*.json ./
 
-# 의존성 설치 (lock 파일 재생성)
-RUN npm install --production
+# 의존성 설치 (npm install 사용)
+RUN rm -f package-lock.json && npm install
 
 # 소스 코드 복사
 COPY . .

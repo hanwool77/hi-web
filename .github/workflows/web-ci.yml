@@ -1,4 +1,4 @@
-# .github/workflows/web-ci.yml (수정된 버전 - 즉시 테스트 가능)
+# .github/workflows/web-ci.yml (수정된 버전)
 name: Web Frontend CI/CD
 
 on:
@@ -6,7 +6,7 @@ on:
     branches: [ main, develop ]
   pull_request:
     branches: [ main ]  
-  workflow_dispatch:  # 수동 실행 가능
+  workflow_dispatch:
 
 env:
   ACR_NAME: acrdigitalgarage03
@@ -27,9 +27,12 @@ jobs:
         node-version: '18'
         cache: 'npm'
         
-    - name: Install dependencies
-      run: npm ci
-      
+    - name: Clean install dependencies
+      run: |
+        # package-lock.json 제거 후 새로 생성
+        rm -f package-lock.json
+        npm install
+        
     - name: Run tests
       run: npm test -- --coverage --watchAll=false
       
@@ -84,7 +87,7 @@ jobs:
         token: ${{ secrets.MANIFEST_TOKEN }}
         path: manifest-repo
         
-    - name: Update Kubernetes manifest
+    - name: Update Kubernetes manifest  
       run: |
         cd manifest-repo/web
         sed -i "s|image: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:.*|image: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ steps.timestamp.outputs.BUILD_TIME }}|g" deployment.yaml
