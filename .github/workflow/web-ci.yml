@@ -1,21 +1,12 @@
-# .github/workflows/web-ci.yml
+# .github/workflows/web-ci.yml (수정된 버전 - 즉시 테스트 가능)
 name: Web Frontend CI/CD
 
 on:
   push:
     branches: [ main, develop ]
-    paths:
-      - 'src/**'
-      - 'public/**'
-      - 'package*.json'
-      - 'deployment/**'
   pull_request:
-    branches: [ main ]
-    paths:
-      - 'src/**'
-      - 'public/**'
-      - 'package*.json'
-  workflow_dispatch:
+    branches: [ main ]  
+  workflow_dispatch:  # 수동 실행 가능
 
 env:
   ACR_NAME: acrdigitalgarage03
@@ -36,16 +27,6 @@ jobs:
         node-version: '18'
         cache: 'npm'
         
-    - name: Cache npm packages
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.npm
-          node_modules
-        key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-npm-
-          
     - name: Install dependencies
       run: npm ci
       
@@ -79,28 +60,12 @@ jobs:
         tags: |
           ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ steps.timestamp.outputs.BUILD_TIME }}
           ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:latest
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
         
     - name: Output image tags
       run: |
         echo "🎉 Frontend Image pushed successfully!"
         echo "📦 Image: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}"
         echo "🏷️  Tags: ${{ steps.timestamp.outputs.BUILD_TIME }}, latest"
-        
-    - name: Upload test results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: web-test-results
-        path: coverage/
-        
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      if: success()
-      with:
-        name: web-build
-        path: build/
 
   update-manifest:
     needs: build-and-push
@@ -122,59 +87,13 @@ jobs:
     - name: Update Kubernetes manifest
       run: |
         cd manifest-repo/web
-        
-        echo "🔄 Updating web deployment manifest..."
-        
-        # deployment.yaml의 이미지 태그 업데이트
         sed -i "s|image: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:.*|image: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ steps.timestamp.outputs.BUILD_TIME }}|g" deployment.yaml
-        
-        # 변경사항 확인
-        echo "📋 Updated deployment.yaml:"
-        grep "image:" deployment.yaml | head -5
         
     - name: Commit and push manifest changes
       run: |
         cd manifest-repo
-        
-        echo "📝 Committing manifest changes..."
-        
-        # Git 설정
         git config --local user.email "wjsgksdnf11@naver.com"
         git config --local user.name "hanwool77"
-        
-        # 변경사항 확인 후 커밋
         git add web/deployment.yaml
-        
-        if git diff --staged --quiet; then
-          echo "📋 No changes to commit"
-        else
-          git commit -m "🚀 Update web frontend image to ${{ steps.timestamp.outputs.BUILD_TIME }}
-
-          - Image: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ steps.timestamp.outputs.BUILD_TIME }}
-          - Source commit: ${{ github.sha }}
-          - Triggered by: ${{ github.actor }}
-          - Repository: ${{ github.repository }}"
-          
-          echo "📤 Pushing changes to manifest repository..."
-          git push
-          
-          echo "✅ Web manifest updated successfully!"
-        fi
-        
-    - name: Create deployment summary
-      run: |
-        echo "## 🚀 Web Frontend Deployment Summary" >> $GITHUB_STEP_SUMMARY
-        echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
-        echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
-        echo "| **Service** | Web Frontend |" >> $GITHUB_STEP_SUMMARY
-        echo "| **Image Tag** | \`${{ steps.timestamp.outputs.BUILD_TIME }}\` |" >> $GITHUB_STEP_SUMMARY
-        echo "| **Full Image** | \`${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ steps.timestamp.outputs.BUILD_TIME }}\` |" >> $GITHUB_STEP_SUMMARY
-        echo "| **Source Commit** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
-        echo "| **Branch** | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
-        echo "| **Manifest Path** | \`web/deployment.yaml\` |" >> $GITHUB_STEP_SUMMARY
-        echo "| **ArgoCD** | [Check Deployment](https://argo.20.249.191.180.nip.io) |" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### 🔄 Next Steps" >> $GITHUB_STEP_SUMMARY
-        echo "1. ArgoCD will automatically detect the manifest changes" >> $GITHUB_STEP_SUMMARY
-        echo "2. New pods will be deployed to \`ns-hiorder\` namespace" >> $GITHUB_STEP_SUMMARY
-        echo "3. Check deployment status in ArgoCD UI" >> $GITHUB_STEP_SUMMARY
+        git diff --staged --quiet || git commit -m "🚀 Update web frontend image to ${{ steps.timestamp.outputs.BUILD_TIME }}"
+        git push
