@@ -1,3 +1,5 @@
+#!/bin/sh
+
 # 환경 변수를 runtime-env.js에 주입
 cat <<EOF > /usr/share/nginx/html/runtime-env.js
 window.__runtime_config__ = {
