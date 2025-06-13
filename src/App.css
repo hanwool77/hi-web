@@ -1,0 +1,18 @@
+.App {
+  text-align: center;
+}
+
+.mobile-container {
+  max-width: 375px;
+  margin: 0 auto;
+  min-height: 100vh;
+  background-color: #f5f5f5;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.content-area {
+  padding: 16px;
+  padding-bottom: 80px;
+  min-height: calc(100vh - 120px);
+}
