@@ -1,4 +1,4 @@
-# .github/workflows/web-ci.yml (최종 수정 버전)
+# .github/workflows/web-ci.yml (완전히 동기화된 버전)
 name: Web Frontend CI/CD
 
 on:
@@ -16,6 +16,9 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    outputs:
+      image-tag: ${{ steps.meta.outputs.image-tag }}
+      image-digest: ${{ steps.push.outputs.digest }}
     
     steps:
     - name: Checkout code
@@ -34,13 +37,18 @@ jobs:
         
     - name: Build application
       run: |
-        # ESLint 경고를 에러로 처리하지 않도록 설정
         export CI=false
         npm run build
       
-    - name: Generate build timestamp
-      id: timestamp
-      run: echo "BUILD_TIME=$(date +'%y%m%d%H%M')" >> $GITHUB_OUTPUT
+    - name: Generate metadata
+      id: meta
+      run: |
+        # 한 번만 타임스탬프 생성
+        BUILD_TIME=$(date +'%y%m%d%H%M')
+        echo "image-tag=${BUILD_TIME}" >> $GITHUB_OUTPUT
+        echo "full-image=${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${BUILD_TIME}" >> $GITHUB_OUTPUT
+        
+        echo "🏷️ Generated image tag: ${BUILD_TIME}"
       
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
@@ -53,21 +61,46 @@ jobs:
         password: ${{ secrets.ACR_PASSWORD }}
         
     - name: Build and push Docker image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: ./deployment/container/Dockerfile
-        platforms: linux/amd64
-        push: true
-        tags: |
-          ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ steps.timestamp.outputs.BUILD_TIME }}
-          ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:latest
-        
-    - name: Output image tags
+      id: push
       run: |
-        echo "🎉 Frontend Image pushed successfully!"
-        echo "📦 Image: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}"
-        echo "🏷️  Tags: ${{ steps.timestamp.outputs.BUILD_TIME }}, latest"
+        IMAGE_TAG="${{ steps.meta.outputs.image-tag }}"
+        FULL_IMAGE="${{ steps.meta.outputs.full-image }}"
+        LATEST_IMAGE="${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:latest"
+        
+        echo "🔨 Building Docker image..."
+        echo "  📦 Tag: ${IMAGE_TAG}"
+        echo "  🖼️ Full Image: ${FULL_IMAGE}"
+        
+        # Docker 이미지 빌드
+        docker build -t ${FULL_IMAGE} -f ./deployment/container/Dockerfile .
+        docker tag ${FULL_IMAGE} ${LATEST_IMAGE}
+        
+        echo "📤 Pushing images to ACR..."
+        # 타임스탬프 태그 푸시
+        docker push ${FULL_IMAGE}
+        # latest 태그 푸시  
+        docker push ${LATEST_IMAGE}
+        
+        echo "✅ Push completed!"
+        
+        # 푸시 검증
+        echo "🔍 Verifying pushed images..."
+        sleep 5  # ACR 반영 대기
+        
+        # 푸시된 이미지 확인
+        if az acr repository show-tags --name ${{ env.ACR_NAME }} --repository ${{ env.IMAGE_NAME }} --query "[?contains(@, '${IMAGE_TAG}')]" -o tsv | grep -q "${IMAGE_TAG}"; then
+          echo "✅ Image verification successful: ${IMAGE_TAG}"
+        else
+          echo "❌ Image verification failed: ${IMAGE_TAG}"
+          echo "📋 Available tags:"
+          az acr repository show-tags --name ${{ env.ACR_NAME }} --repository ${{ env.IMAGE_NAME }} --output table
+          exit 1
+        fi
+        
+        # 성공 메시지  
+        echo "🎉 Images pushed successfully!"
+        echo "  📦 Timestamped: ${FULL_IMAGE}"
+        echo "  🏷️  Latest: ${LATEST_IMAGE}"
 
   update-manifest:
     needs: build-and-push
@@ -75,10 +108,6 @@ jobs:
     if: github.ref == 'refs/heads/main'
     
     steps:
-    - name: Generate build timestamp
-      id: timestamp
-      run: echo "BUILD_TIME=$(date +'%y%m%d%H%M')" >> $GITHUB_OUTPUT
-      
     - name: Checkout manifest repository
       uses: actions/checkout@v4
       with:
@@ -86,16 +115,96 @@ jobs:
         token: ${{ secrets.MANIFEST_TOKEN }}
         path: manifest-repo
         
-    - name: Update Kubernetes manifest  
+    - name: Update Kubernetes manifest
       run: |
         cd manifest-repo/web
-        sed -i "s|image: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:.*|image: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ steps.timestamp.outputs.BUILD_TIME }}|g" deployment.yaml
+        
+        # build-and-push job에서 전달받은 태그 사용
+        IMAGE_TAG="${{ needs.build-and-push.outputs.image-tag }}"
+        NEW_IMAGE="${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${IMAGE_TAG}"
+        
+        echo "🔄 Updating deployment.yaml..."
+        echo "  🏷️ Using image tag: ${IMAGE_TAG}"
+        echo "  🖼️ New image: ${NEW_IMAGE}"
+        
+        # 현재 이미지 확인
+        echo "📋 Before update:"
+        grep -n "image:" deployment.yaml || echo "No image found"
+        
+        # 이미지 태그 업데이트
+        sed -i "s|image: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:.*|image: ${NEW_IMAGE}|g" deployment.yaml
+        
+        # 업데이트 결과 확인
+        echo "📋 After update:"
+        grep -n "image:" deployment.yaml || echo "No image found"
+        
+        # 변경사항 검증
+        if grep -q "${IMAGE_TAG}" deployment.yaml; then
+          echo "✅ Image tag update successful"
+        else
+          echo "❌ Image tag update failed"
+          exit 1
+        fi
         
     - name: Commit and push manifest changes
       run: |
         cd manifest-repo
+        
+        # Git 설정
         git config --local user.email "wjsgksdnf11@naver.com"
         git config --local user.name "hanwool77"
+        
+        # 변경사항 스테이징
         git add web/deployment.yaml
-        git diff --staged --quiet || git commit -m "🚀 Update web frontend image to ${{ steps.timestamp.outputs.BUILD_TIME }}"
+        
+        # 변경사항 확인
+        if git diff --staged --quiet; then
+          echo "📋 No changes to commit"
+          exit 0
+        fi
+        
+        # 커밋 메시지 생성
+        IMAGE_TAG="${{ needs.build-and-push.outputs.image-tag }}"
+        COMMIT_MSG="🚀 Update web frontend image to ${IMAGE_TAG}
+
+        ✨ Deployment Details:
+        - Image: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${IMAGE_TAG}
+        - Source commit: ${{ github.sha }}
+        - Triggered by: ${{ github.actor }}
+        - Repository: ${{ github.repository }}
+        - Workflow: ${{ github.workflow }}
+        
+        🔗 Links:
+        - Source: https://github.com/${{ github.repository }}/commit/${{ github.sha }}
+        - Actions: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        
+        # 커밋 및 푸시
+        git commit -m "${COMMIT_MSG}"
+        
+        echo "📤 Pushing changes to manifest repository..."
         git push
+        
+        echo "✅ Manifest updated successfully!"
+        echo "🔍 Verify at: https://github.com/${{ env.MANIFEST_REPO }}/commits/main"
+        
+    - name: Create deployment summary
+      run: |
+        IMAGE_TAG="${{ needs.build-and-push.outputs.image-tag }}"
+        
+        echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
+        echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+        echo "| **Service** | Web Frontend |" >> $GITHUB_STEP_SUMMARY
+        echo "| **Image Tag** | \`${IMAGE_TAG}\` |" >> $GITHUB_STEP_SUMMARY
+        echo "| **Full Image** | \`${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${IMAGE_TAG}\` |" >> $GITHUB_STEP_SUMMARY
+        echo "| **Source Commit** | [\`${{ github.sha }}\`](https://github.com/${{ github.repository }}/commit/${{ github.sha }}) |" >> $GITHUB_STEP_SUMMARY
+        echo "| **Branch** | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+        echo "| **Manifest** | [web/deployment.yaml](https://github.com/${{ env.MANIFEST_REPO }}/blob/main/web/deployment.yaml) |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🔄 Next Steps" >> $GITHUB_STEP_SUMMARY
+        echo "1. ArgoCD will detect manifest changes within 3 minutes" >> $GITHUB_STEP_SUMMARY
+        echo "2. New pods will be deployed to \`ns-hiorder\` namespace" >> $GITHUB_STEP_SUMMARY
+        echo "3. Monitor deployment: [ArgoCD UI](https://argo.20.249.191.180.nip.io)" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "🎯 **Expected Result**: Image \`${IMAGE_TAG}\` deployed to production"
