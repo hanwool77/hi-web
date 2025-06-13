@@ -1,4 +1,5 @@
-name: Web Frontend CI
+# .github/workflows/web-ci.yml
+name: Web Frontend CI/CD
 
 on:
   push:
@@ -124,7 +125,7 @@ jobs:
         
         echo "🔄 Updating web deployment manifest..."
         
-        # deployment.yaml의 이미지 태그 업데이트 (기존 패턴과 동일)
+        # deployment.yaml의 이미지 태그 업데이트
         sed -i "s|image: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:.*|image: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ steps.timestamp.outputs.BUILD_TIME }}|g" deployment.yaml
         
         # 변경사항 확인
@@ -137,7 +138,7 @@ jobs:
         
         echo "📝 Committing manifest changes..."
         
-        # Git 설정 (기존 패턴과 동일)
+        # Git 설정
         git config --local user.email "wjsgksdnf11@naver.com"
         git config --local user.name "hanwool77"
         
