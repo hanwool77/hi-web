@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import api from '../services/api';
+import { authApi } from '../services/api'; // 변경된 부분
 
 const AuthContext = createContext();
 
@@ -18,7 +18,7 @@ export const AuthProvider = ({ children }) => {
 
   const loadUserProfile = async () => {
     try {
-      const response = await api.get('/api/members/profile');
+      const response = await authApi.get('/api/members/profile'); // authApi 사용
       setUser(response.data);
     } catch (error) {
       console.error('사용자 정보 로드 실패:', error);
@@ -30,7 +30,6 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     if (token) {
-      // 토큰이 있으면 사용자 정보 로드
       loadUserProfile();
     } else {
       setLoading(false);
@@ -39,7 +38,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (username, password) => {
     try {
-      const response = await api.post('/api/auth/login', {
+      const response = await authApi.post('/api/auth/login', {
         username,
         password
       });
@@ -52,7 +51,6 @@ export const AuthProvider = ({ children }) => {
       
       setToken(accessToken);
       
-      // 사용자 정보 로드
       await loadUserProfile();
       
       return { success: true, role };
@@ -75,7 +73,7 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (userData) => {
     try {
-      await api.post('/api/members/register', userData);
+      await authApi.post('/api/members/register', userData);
       return { success: true };
     } catch (error) {
       console.error('회원가입 실패:', error);

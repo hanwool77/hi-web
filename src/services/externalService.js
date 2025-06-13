@@ -1,9 +1,9 @@
-import api from './api';
+import { storeApi } from './api';
 
 export const externalService = {
   // 외부 플랫폼 리뷰 동기화
   syncReviews: async (storeId, platform, externalStoreId) => {
-    const response = await api.post(`/api/external/stores/${storeId}/sync-reviews`, {
+    const response = await storeApi.post(`/api/external/stores/${storeId}/sync-reviews`, {
       platform,
       externalStoreId
     });
@@ -12,7 +12,7 @@ export const externalService = {
 
   // 외부 플랫폼 계정 연동
   connectPlatform: async (storeId, platform, credentials) => {
-    const response = await api.post(`/api/external/stores/${storeId}/connect`, {
+    const response = await storeApi.post(`/api/external/stores/${storeId}/connect`, {
       platform,
       ...credentials
     });

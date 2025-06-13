@@ -1,8 +1,8 @@
-import api from './api';
+import { authApi } from './api';
 
 export const authService = {
   login: async (username, password) => {
-    const response = await api.post('/api/auth/login', {
+    const response = await authApi.post('/api/auth/login', {
       username,
       password
     });
@@ -10,26 +10,26 @@ export const authService = {
   },
 
   logout: async () => {
-    const response = await api.post('/api/auth/logout', {
+    const response = await authApi.post('/api/auth/logout', {
       refreshToken: localStorage.getItem('refreshToken')
     });
     return response.data;
   },
 
   register: async (userData) => {
-    const response = await api.post('/api/members/register', userData);
+    const response = await authApi.post('/api/members/register', userData);
     return response.data;
   },
 
   refreshToken: async (refreshToken) => {
-    const response = await api.post('/api/auth/refresh', null, {
+    const response = await authApi.post('/api/auth/refresh', null, {
       params: { refreshToken }
     });
     return response.data;
   },
 
   getProfile: async () => {
-    const response = await api.get('/api/members/profile');
+    const response = await authApi.get('/api/members/profile');
     return response.data;
   }
 };
