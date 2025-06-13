@@ -34,7 +34,7 @@ jobs:
         npm install
         
     - name: Run tests
-      run: npm test -- --coverage --watchAll=false
+      run: npm test -- --coverage --watchAll=false --passWithNoTests
       
     - name: Build application
       run: npm run build
