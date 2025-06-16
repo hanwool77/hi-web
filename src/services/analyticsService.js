@@ -1,4 +1,4 @@
-//* src/services/analyticsService.js
+//* src/services/analyticsService.js - API 엔드포인트 수정
 import { analyticsApi } from './api';
 
 export const analyticsService = {
@@ -8,9 +8,12 @@ export const analyticsService = {
     return response.data;
   },
 
-  // AI 피드백 조회
-  getAIFeedback: async (storeId) => {
-    const response = await analyticsApi.get(`/api/analytics/stores/${storeId}/ai-feedback`);
+  // AI 피드백 조회 - API 엔드포인트 변경: GET → POST, URL 변경
+  getAIFeedback: async (storeId, days = 30) => {
+    const response = await analyticsApi.post(`/api/analytics/stores/${storeId}/ai-analysis`, {
+      days: days,
+      generateActionPlan: true
+    });
     return response.data;
   },
 
