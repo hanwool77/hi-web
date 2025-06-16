@@ -49,7 +49,7 @@ const OwnerMyPage = () => {
       icon: <AccountCircle sx={{ fontSize: 40, color: '#9c27b0' }} />,
       title: '회원정보 수정',
       description: '개인정보 및 계정 설정',
-      action: () => navigate('/owner/profile')
+      action: () => navigate('/owner/ProfileEdit')
     },
     {
       icon: <Logout sx={{ fontSize: 40, color: '#f44336' }} />,
