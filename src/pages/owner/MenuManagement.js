@@ -1,6 +1,6 @@
 //* src/pages/owner/MenuManagement.js
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { 
   Box, 
   Typography, 
@@ -13,15 +13,17 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField
+  TextField,
+  CircularProgress
 } from '@mui/material';
-import { ArrowBack, Add, Edit, Delete } from '@mui/icons-material';
+import { ArrowBack, Add, Edit, Delete, Restaurant } from '@mui/icons-material';
 import { storeApi } from '../../services/api';
+import { useSelectedStore } from '../../contexts/SelectedStoreContext';
 import OwnerNavigation from '../../components/common/Navigation';
 
 const MenuManagement = () => {
   const navigate = useNavigate();
-  const { storeId } = useParams();
+  const { selectedStoreId } = useSelectedStore();
   const [menus, setMenus] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
@@ -34,15 +36,19 @@ const MenuManagement = () => {
   });
 
   useEffect(() => {
-    loadMenus();
-  }, [storeId]);
+    if (selectedStoreId) {
+      loadMenus();
+    }
+  }, [selectedStoreId]);
 
   const loadMenus = async () => {
     try {
-      const response = await storeApi.get(`/api/stores/${storeId}/menus`);
+      setLoading(true);
+      const response = await storeApi.get(`/api/stores/${selectedStoreId}/menus`);
       setMenus(response.data.data || []);
     } catch (error) {
       console.error('메뉴 목록 로드 실패:', error);
+      setMenus([]);
     } finally {
       setLoading(false);
     }
@@ -68,24 +74,26 @@ const MenuManagement = () => {
   const handleSaveMenu = async () => {
     try {
       if (editingMenu) {
-        await storeApi.put(`/api/stores/${storeId}/menus/${editingMenu.id}`, formData);
+        await storeApi.put(`/api/stores/${selectedStoreId}/menus/${editingMenu.id}`, formData);
       } else {
-        await storeApi.post(`/api/stores/${storeId}/menus`, formData);
+        await storeApi.post(`/api/stores/${selectedStoreId}/menus`, formData);
       }
       setOpenDialog(false);
       loadMenus();
     } catch (error) {
       console.error('메뉴 저장 실패:', error);
+      alert('메뉴 저장에 실패했습니다.');
     }
   };
 
   const handleDeleteMenu = async (menuId) => {
     if (window.confirm('정말 삭제하시겠습니까?')) {
       try {
-        await storeApi.delete(`/api/stores/${storeId}/menus/${menuId}`);
+        await storeApi.delete(`/api/stores/${selectedStoreId}/menus/${menuId}`);
         loadMenus();
       } catch (error) {
         console.error('메뉴 삭제 실패:', error);
+        alert('메뉴 삭제에 실패했습니다.');
       }
     }
   };
@@ -93,6 +101,16 @@ const MenuManagement = () => {
   const formatPrice = (price) => {
     return price?.toLocaleString() + '원';
   };
+
+  if (loading) {
+    return (
+      <Box className="mobile-container">
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+          <CircularProgress />
+        </Box>
+      </Box>
+    );
+  }
 
   return (
     <Box className="mobile-container">
@@ -106,7 +124,7 @@ const MenuManagement = () => {
         gap: 1
       }}>
         <ArrowBack 
-          onClick={() => navigate(`/owner/stores/${storeId}/management`)}
+          onClick={() => navigate('/owner/management')}
           sx={{ cursor: 'pointer' }}
         />
         <Box>
@@ -117,56 +135,78 @@ const MenuManagement = () => {
       </Box>
       
       <Box className="content-area">
-        {/* 메뉴 목록 */}
-        <Grid container spacing={2}>
-          {menus.map((menu) => (
-            <Grid item xs={12} sm={6} key={menu.id}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>
-                    {menu.name}
-                  </Typography>
-                  <Typography variant="h6" color="primary" sx={{ mb: 1 }}>
-                    {formatPrice(menu.price)}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    {menu.description}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    카테고리: {menu.category}
-                  </Typography>
-                  
-                  <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
-                    <Button 
-                      size="small" 
-                      startIcon={<Edit />}
-                      onClick={() => handleEditMenu(menu)}
-                    >
-                      수정
-                    </Button>
-                    <Button 
-                      size="small" 
-                      color="error"
-                      startIcon={<Delete />}
-                      onClick={() => handleDeleteMenu(menu.id)}
-                    >
-                      삭제
-                    </Button>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
+        {menus.length === 0 ? (
+          <Card>
+            <CardContent sx={{ textAlign: 'center', py: 4 }}>
+              <Restaurant sx={{ fontSize: 48, color: '#ccc', mb: 2 }} />
+              <Typography variant="h6" color="text.secondary">
+                등록된 메뉴가 없습니다
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                첫 번째 메뉴를 추가해보세요
+              </Typography>
+              <Button 
+                variant="contained" 
+                startIcon={<Add />}
+                onClick={handleAddMenu}
+              >
+                메뉴 추가
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <Grid container spacing={2}>
+            {menus.map((menu) => (
+              <Grid item xs={12} sm={6} key={menu.id}>
+                <Card>
+                  <CardContent>
+                    <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>
+                      {menu.name}
+                    </Typography>
+                    <Typography variant="h6" color="primary" sx={{ mb: 1 }}>
+                      {formatPrice(menu.price)}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                      {menu.description}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      카테고리: {menu.category}
+                    </Typography>
+                    
+                    <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
+                      <Button 
+                        size="small" 
+                        startIcon={<Edit />}
+                        onClick={() => handleEditMenu(menu)}
+                      >
+                        수정
+                      </Button>
+                      <Button 
+                        size="small" 
+                        color="error"
+                        startIcon={<Delete />}
+                        onClick={() => handleDeleteMenu(menu.id)}
+                      >
+                        삭제
+                      </Button>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        )}
 
-        {/* 메뉴 추가 FAB */}
-        <Fab
-          color="primary"
-          sx={{ position: 'fixed', bottom: 80, right: 16 }}
-          onClick={handleAddMenu}
-        >
-          <Add />
-        </Fab>
+        {/* 메뉴 추가 FAB - 메뉴가 있을 때만 표시 */}
+        {menus.length > 0 && (
+          <Fab
+            color="primary"
+            sx={{ position: 'fixed', bottom: 80, right: 16 }}
+            onClick={handleAddMenu}
+          >
+            <Add />
+          </Fab>
+        )}
 
         {/* 메뉴 추가/편집 다이얼로그 */}
         <Dialog open={openDialog} onClose={() => setOpenDialog(false)} fullWidth>

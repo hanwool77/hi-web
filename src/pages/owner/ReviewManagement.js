@@ -1,6 +1,6 @@
 //* src/pages/owner/ReviewManagement.js
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { 
   Box, 
   Typography, 
@@ -13,15 +13,17 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField
+  TextField,
+  CircularProgress
 } from '@mui/material';
-import { ArrowBack, Reply } from '@mui/icons-material';
+import { ArrowBack, Reply, RateReview } from '@mui/icons-material';
 import { reviewApi } from '../../services/api';
+import { useSelectedStore } from '../../contexts/SelectedStoreContext';
 import OwnerNavigation from '../../components/common/Navigation';
 
 const ReviewManagement = () => {
   const navigate = useNavigate();
-  const { storeId } = useParams();
+  const { selectedStoreId } = useSelectedStore();
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openReplyDialog, setOpenReplyDialog] = useState(false);
@@ -29,15 +31,19 @@ const ReviewManagement = () => {
   const [replyText, setReplyText] = useState('');
 
   useEffect(() => {
-    loadReviews();
-  }, [storeId]);
+    if (selectedStoreId) {
+      loadReviews();
+    }
+  }, [selectedStoreId]);
 
   const loadReviews = async () => {
     try {
-      const response = await reviewApi.get(`/api/reviews/stores/${storeId}`);
+      setLoading(true);
+      const response = await reviewApi.get(`/api/reviews/stores/${selectedStoreId}`);
       setReviews(response.data.data || []);
     } catch (error) {
       console.error('리뷰 목록 로드 실패:', error);
+      setReviews([]);
     } finally {
       setLoading(false);
     }
@@ -58,6 +64,7 @@ const ReviewManagement = () => {
       loadReviews();
     } catch (error) {
       console.error('답글 저장 실패:', error);
+      alert('답글 저장에 실패했습니다.');
     }
   };
 
@@ -68,6 +75,16 @@ const ReviewManagement = () => {
       default: return 'default';
     }
   };
+
+  if (loading) {
+    return (
+      <Box className="mobile-container">
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+          <CircularProgress />
+        </Box>
+      </Box>
+    );
+  }
 
   return (
     <Box className="mobile-container">
@@ -81,7 +98,7 @@ const ReviewManagement = () => {
         gap: 1
       }}>
         <ArrowBack 
-          onClick={() => navigate(`/owner/stores/${storeId}/management`)}
+          onClick={() => navigate('/owner/management')}
           sx={{ cursor: 'pointer' }}
         />
         <Box>
@@ -92,54 +109,67 @@ const ReviewManagement = () => {
       </Box>
       
       <Box className="content-area">
-        {/* 리뷰 목록 */}
-        {reviews.map((review) => (
-          <Card key={review.id} sx={{ mb: 2 }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                <Box>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                    {review.customerName}
-                  </Typography>
-                  <Rating value={review.rating} readOnly size="small" />
-                </Box>
-                <Chip 
-                  label={review.sentiment === 'POSITIVE' ? '긍정' : review.sentiment === 'NEGATIVE' ? '부정' : '중립'} 
-                  size="small" 
-                  color={getSentimentColor(review.sentiment)}
-                />
-              </Box>
-              
-              <Typography variant="body2" sx={{ mb: 2 }}>
-                {review.content}
+        {reviews.length === 0 ? (
+          <Card>
+            <CardContent sx={{ textAlign: 'center', py: 4 }}>
+              <RateReview sx={{ fontSize: 48, color: '#ccc', mb: 2 }} />
+              <Typography variant="h6" color="text.secondary">
+                등록된 매장 리뷰가 없습니다
               </Typography>
-              
-              {review.ownerReply && (
-                <Box sx={{ bgcolor: '#f5f5f5', p: 2, borderRadius: 1, mb: 2 }}>
-                  <Typography variant="caption" color="primary" sx={{ fontWeight: 'bold' }}>
-                    사장님 답글
-                  </Typography>
-                  <Typography variant="body2">
-                    {review.ownerReply}
-                  </Typography>
-                </Box>
-              )}
-              
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="caption" color="text.secondary">
-                  {new Date(review.createdAt).toLocaleDateString()}
-                </Typography>
-                <Button 
-                  size="small" 
-                  startIcon={<Reply />}
-                  onClick={() => handleReply(review)}
-                >
-                  {review.ownerReply ? '답글 수정' : '답글 작성'}
-                </Button>
-              </Box>
+              <Typography variant="body2" color="text.secondary">
+                고객들의 첫 번째 리뷰를 기다려보세요
+              </Typography>
             </CardContent>
           </Card>
-        ))}
+        ) : (
+          reviews.map((review) => (
+            <Card key={review.id} sx={{ mb: 2 }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                  <Box>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                      {review.customerName}
+                    </Typography>
+                    <Rating value={review.rating} readOnly size="small" />
+                  </Box>
+                  <Chip 
+                    label={review.sentiment === 'POSITIVE' ? '긍정' : review.sentiment === 'NEGATIVE' ? '부정' : '중립'} 
+                    size="small" 
+                    color={getSentimentColor(review.sentiment)}
+                  />
+                </Box>
+                
+                <Typography variant="body2" sx={{ mb: 2 }}>
+                  {review.content}
+                </Typography>
+                
+                {review.ownerReply && (
+                  <Box sx={{ bgcolor: '#f5f5f5', p: 2, borderRadius: 1, mb: 2 }}>
+                    <Typography variant="caption" color="primary" sx={{ fontWeight: 'bold' }}>
+                      사장님 답글
+                    </Typography>
+                    <Typography variant="body2">
+                      {review.ownerReply}
+                    </Typography>
+                  </Box>
+                )}
+                
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="caption" color="text.secondary">
+                    {new Date(review.createdAt).toLocaleDateString()}
+                  </Typography>
+                  <Button 
+                    size="small" 
+                    startIcon={<Reply />}
+                    onClick={() => handleReply(review)}
+                  >
+                    {review.ownerReply ? '답글 수정' : '답글 작성'}
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
+          ))
+        )}
 
         {/* 답글 작성 다이얼로그 */}
         <Dialog open={openReplyDialog} onClose={() => setOpenReplyDialog(false)} fullWidth>

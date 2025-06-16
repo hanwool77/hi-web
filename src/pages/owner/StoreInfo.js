@@ -1,6 +1,6 @@
 //* src/pages/owner/StoreInfo.js
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { 
   Box, 
   Typography, 
@@ -8,15 +8,17 @@ import {
   CardContent, 
   TextField,
   Button,
-  Grid
+  Grid,
+  CircularProgress
 } from '@mui/material';
 import { ArrowBack, Save } from '@mui/icons-material';
 import { storeApi } from '../../services/api';
+import { useSelectedStore } from '../../contexts/SelectedStoreContext';
 import OwnerNavigation from '../../components/common/Navigation';
 
 const StoreInfo = () => {
   const navigate = useNavigate();
-  const { storeId } = useParams();
+  const { selectedStoreId } = useSelectedStore();
   const [storeInfo, setStoreInfo] = useState({
     name: '',
     description: '',
@@ -28,12 +30,14 @@ const StoreInfo = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadStoreInfo();
-  }, [storeId]);
+    if (selectedStoreId) {
+      loadStoreInfo();
+    }
+  }, [selectedStoreId]);
 
   const loadStoreInfo = async () => {
     try {
-      const response = await storeApi.get(`/api/stores/${storeId}`);
+      const response = await storeApi.get(`/api/stores/${selectedStoreId}`);
       setStoreInfo(response.data.data || {});
     } catch (error) {
       console.error('매장 정보 로드 실패:', error);
@@ -44,7 +48,7 @@ const StoreInfo = () => {
 
   const handleSave = async () => {
     try {
-      await storeApi.put(`/api/stores/${storeId}`, storeInfo);
+      await storeApi.put(`/api/stores/${selectedStoreId}`, storeInfo);
       alert('매장 정보가 저장되었습니다.');
     } catch (error) {
       console.error('매장 정보 저장 실패:', error);
@@ -59,6 +63,16 @@ const StoreInfo = () => {
     }));
   };
 
+  if (loading) {
+    return (
+      <Box className="mobile-container">
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+          <CircularProgress />
+        </Box>
+      </Box>
+    );
+  }
+
   return (
     <Box className="mobile-container">
       {/* 헤더 */}
@@ -71,7 +85,7 @@ const StoreInfo = () => {
         gap: 1
       }}>
         <ArrowBack 
-          onClick={() => navigate(`/owner/stores/${storeId}/management`)}
+          onClick={() => navigate('/owner/management')}
           sx={{ cursor: 'pointer' }}
         />
         <Box>
@@ -143,22 +157,21 @@ const StoreInfo = () => {
               </Grid>
             </Grid>
             
-            <Button
-              fullWidth
-              variant="contained"
-              startIcon={<Save />}
-              onClick={handleSave}
-              sx={{ mt: 3 }}
-            >
-              저장
-            </Button>
-          </CardContent>
-        </Card>
-      </Box>
-      
-      <OwnerNavigation />
-    </Box>
-  );
+            <Button fullWidth
+             variant="contained"
+             startIcon={<Save />}
+             onClick={handleSave}
+             sx={{ mt: 3 }}
+           >
+             저장
+           </Button>
+         </CardContent>
+       </Card>
+     </Box>
+     
+     <OwnerNavigation />
+   </Box>
+ );
 };
 
 export default StoreInfo;

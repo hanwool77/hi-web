@@ -71,7 +71,7 @@ function App() {
                   } 
                 />
                 
-                {/* 점주 페이지 */}
+                {/* 점주 페이지 - 매장 ID 없이 라우팅 */}
                 <Route 
                   path="/owner" 
                   element={
@@ -81,7 +81,7 @@ function App() {
                   } 
                 />
                 <Route 
-                  path="/owner/stores/:storeId/analytics" 
+                  path="/owner/analytics" 
                   element={
                     <ProtectedRoute>
                       <StoreAnalytics />
@@ -89,7 +89,7 @@ function App() {
                   } 
                 />
                 <Route 
-                  path="/owner/stores/:storeId/ai-feedback" 
+                  path="/owner/ai-feedback" 
                   element={
                     <ProtectedRoute>
                       <AIFeedback />
@@ -97,7 +97,7 @@ function App() {
                   } 
                 />
                 <Route 
-                  path="/owner/stores/:storeId/ai-feedback/detail" 
+                  path="/owner/ai-feedback/detail" 
                   element={
                     <ProtectedRoute>
                       <AIFeedbackDetail />
@@ -105,7 +105,7 @@ function App() {
                   } 
                 />
                 <Route 
-                  path="/owner/stores/:storeId/action-plan" 
+                  path="/owner/action-plan" 
                   element={
                     <ProtectedRoute>
                       <ActionPlan />
@@ -121,7 +121,7 @@ function App() {
                   } 
                 />
                 <Route 
-                  path="/owner/stores/:storeId/management" 
+                  path="/owner/management" 
                   element={
                     <ProtectedRoute>
                       <StoreManagement />
@@ -129,7 +129,7 @@ function App() {
                   } 
                 />
                 <Route 
-                  path="/owner/stores/:storeId/menu" 
+                  path="/owner/menu" 
                   element={
                     <ProtectedRoute>
                       <MenuManagement />
@@ -137,7 +137,7 @@ function App() {
                   } 
                 />
                 <Route 
-                  path="/owner/stores/:storeId/reviews" 
+                  path="/owner/reviews" 
                   element={
                     <ProtectedRoute>
                       <ReviewManagement />
@@ -145,7 +145,7 @@ function App() {
                   } 
                 />
                 <Route 
-                  path="/owner/stores/:storeId/info" 
+                  path="/owner/info" 
                   element={
                     <ProtectedRoute>
                       <StoreInfo />

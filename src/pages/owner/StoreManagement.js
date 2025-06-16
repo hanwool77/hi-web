@@ -10,31 +10,29 @@ import {
   Settings,
   ArrowBack 
 } from '@mui/icons-material';
-import { useSelectedStore } from '../../contexts/SelectedStoreContext';
 import OwnerNavigation from '../../components/common/Navigation';
 
 const StoreManagement = () => {
   const navigate = useNavigate();
-  const { selectedStoreId } = useSelectedStore();
 
   const managementMenus = [
     {
       icon: <Restaurant sx={{ fontSize: 40, color: '#ff5722' }} />,
       title: '메뉴 관리',
       description: '메뉴 등록, 수정, 삭제 관리',
-      action: () => navigate(`/owner/stores/${selectedStoreId}/menu`)
+      action: () => navigate('/owner/menu')
     },
     {
       icon: <RateReview sx={{ fontSize: 40, color: '#2196f3' }} />,
       title: '내 매장 리뷰',
       description: '고객 리뷰 조회 및 답글 관리',
-      action: () => navigate(`/owner/stores/${selectedStoreId}/reviews`)
+      action: () => navigate('/owner/reviews')
     },
     {
       icon: <Analytics sx={{ fontSize: 40, color: '#4caf50' }} />,
       title: '매장 분석',
       description: 'AI 피드백 및 통계 분석',
-      action: () => navigate(`/owner/stores/${selectedStoreId}/analytics`)
+      action: () => navigate('/owner/analytics')
     },
     {
       icon: <Link sx={{ fontSize: 40, color: '#9c27b0' }} />,
@@ -46,7 +44,7 @@ const StoreManagement = () => {
       icon: <Settings sx={{ fontSize: 40, color: '#607d8b' }} />,
       title: '매장 정보 관리',
       description: '기본 정보, 운영시간 등',
-      action: () => navigate(`/owner/stores/${selectedStoreId}/info`)
+      action: () => navigate('/owner/info')
     }
   ];
 

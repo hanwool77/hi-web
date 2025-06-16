@@ -10,26 +10,33 @@ import {
   List,
   ListItem,
   ListItemText,
-  Divider 
+  Divider,
+  CircularProgress
 } from '@mui/material';
 import { ArrowBack, Assignment } from '@mui/icons-material';
 import { analyticsService } from '../../services/analyticsService';
+import { useSelectedStore } from '../../contexts/SelectedStoreContext';
 
 const ActionPlanList = () => {
   const navigate = useNavigate();
+  const { selectedStoreId } = useSelectedStore();
   const [actionPlans, setActionPlans] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadActionPlans();
-  }, []);
+    if (selectedStoreId) {
+      loadActionPlans();
+    }
+  }, [selectedStoreId]);
 
   const loadActionPlans = async () => {
     try {
-      const response = await analyticsService.getActionPlans();
+      setLoading(true);
+      const response = await analyticsService.getActionPlans(selectedStoreId);
       setActionPlans(response.data || []);
     } catch (error) {
       console.error('실행 계획 목록 로드 실패:', error);
+      setActionPlans([]);
     } finally {
       setLoading(false);
     }
@@ -52,7 +59,9 @@ const ActionPlanList = () => {
   if (loading) {
     return (
       <Box className="mobile-container">
-        <Typography>로딩 중...</Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+          <CircularProgress />
+        </Box>
       </Box>
     );
   }
