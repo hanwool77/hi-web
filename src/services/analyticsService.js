@@ -1,3 +1,4 @@
+//* src/services/analyticsService.js
 import { analyticsApi } from './api';
 
 export const analyticsService = {
@@ -7,17 +8,15 @@ export const analyticsService = {
     return response.data;
   },
 
-  // AI 피드백 상세 조회
-  getAIFeedbackDetail: async (storeId) => {
+  // AI 피드백 조회
+  getAIFeedback: async (storeId) => {
     const response = await analyticsApi.get(`/api/analytics/stores/${storeId}/ai-feedback`);
     return response.data;
   },
 
-  // 매장 통계 조회
-  getStoreStatistics: async (storeId, startDate, endDate) => {
-    const response = await analyticsApi.get(`/api/analytics/stores/${storeId}/statistics`, {
-      params: { startDate, endDate }
-    });
+  // 실행 계획 저장
+  saveActionPlan: async (data) => {
+    const response = await analyticsApi.post('/api/action-plans', data);
     return response.data;
   },
 
@@ -33,9 +32,15 @@ export const analyticsService = {
     return response.data;
   },
 
-  // 실행 계획 저장
-  saveActionPlan: async (data) => {
-    const response = await analyticsApi.post('/api/action-plans', data);
+  // 매장 리뷰 분석
+  getReviewAnalytics: async (storeId) => {
+    const response = await analyticsApi.get(`/api/analytics/stores/${storeId}/reviews`);
+    return response.data;
+  },
+
+  // 매장 주문 데이터 분석
+  getOrderAnalytics: async (storeId) => {
+    const response = await analyticsApi.get(`/api/analytics/stores/${storeId}/orders`);
     return response.data;
   }
 };

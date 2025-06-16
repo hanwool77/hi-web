@@ -1,47 +1,39 @@
-import React, { useState, useEffect } from 'react';
+//* src/pages/owner/OwnerMainPage.js
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Box, Typography, Card, CardContent, Button, Grid,
-  Avatar, Chip
-} from '@mui/material';
-import { Add, Store, Analytics, Assignment } from '@mui/icons-material';
-import { storeService } from '../../services/storeService';
-import OwnerNavigation from '../../components/common/OwnerNavigation';
+import { Box, Typography, Card, CardContent, Grid } from '@mui/material';
+import { Analytics, TrendingUp, Psychology, Assignment } from '@mui/icons-material';
+import { useSelectedStore } from '../../contexts/SelectedStoreContext';
+import OwnerNavigation from '../../components/common/Navigation';
 
 const OwnerMainPage = () => {
   const navigate = useNavigate();
-  const [stores, setStores] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { selectedStoreId } = useSelectedStore();
 
-  useEffect(() => {
-    loadOwnerStores();
-  }, []);
-
-  const loadOwnerStores = async () => {
-    try {
-      setLoading(true);
-      const response = await storeService.getOwnerStores();
-      setStores(response.data || []);
-    } catch (error) {
-      console.error('매장 목록 로드 실패:', error);
-      setStores([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const quickActions = [
+  const analysisMenus = [
     {
-      icon: <Add />,
-      title: '매장 등록',
-      description: '새로운 매장 등록하기',
-      action: () => navigate('/owner/store/register')
+      icon: <Analytics sx={{ fontSize: 40, color: '#3f51b5' }} />,
+      title: '매장 내 주문데이터 분석',
+      description: '주문 패턴과 매출 트렌드 분석',
+      action: () => navigate(`/owner/stores/${selectedStoreId}/analytics`)
     },
     {
-      icon: <Store />,
-      title: '매장 목록',
-      description: '등록된 매장 관리',
-      action: () => navigate('/owner/stores')
+      icon: <TrendingUp sx={{ fontSize: 40, color: '#4caf50' }} />,
+      title: '리뷰 분석',
+      description: '고객 리뷰 감정 분석 및 트렌드',
+      action: () => navigate(`/owner/stores/${selectedStoreId}/reviews`)
+    },
+    {
+      icon: <Psychology sx={{ fontSize: 40, color: '#ff9800' }} />,
+      title: 'AI 피드백',
+      description: 'AI 기반 매장 운영 개선 제안',
+      action: () => navigate(`/owner/stores/${selectedStoreId}/ai-feedback`)
+    },
+    {
+      icon: <Assignment sx={{ fontSize: 40, color: '#9c27b0' }} />,
+      title: '실행 계획',
+      description: '저장된 실행 계획 목록 관리',
+      action: () => navigate('/owner/action-plan/list')
     }
   ];
 
@@ -50,106 +42,45 @@ const OwnerMainPage = () => {
       {/* 헤더 */}
       <Box sx={{ p: 2, bgcolor: '#2c3e50', color: 'white' }}>
         <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-          점주 대시보드
+          분석 대시보드
         </Typography>
         <Typography variant="body2">
-          매장 관리 및 분석
+          AI 기반 매장 분석 및 개선 방안
         </Typography>
       </Box>
-
+      
       <Box className="content-area">
-        {/* 빠른 실행 */}
-        <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
-          빠른 실행
-        </Typography>
-        <Grid container spacing={2} sx={{ mb: 3 }}>
-          {quickActions.map((action, index) => (
-            <Grid item xs={6} key={index}>
-              <Card onClick={action.action} sx={{ cursor: 'pointer', height: '100%' }}>
-                <CardContent sx={{ textAlign: 'center', p: 2 }}>
-                  {action.icon}
-                  <Typography variant="subtitle2" sx={{ mt: 1, fontWeight: 'bold' }}>
-                    {action.title}
+        {/* 분석 메뉴 */}
+        <Grid container spacing={2}>
+          {analysisMenus.map((menu, index) => (
+            <Grid item xs={12} sm={6} key={index}>
+              <Card 
+                sx={{ 
+                  cursor: 'pointer', 
+                  height: '100%',
+                  transition: 'transform 0.2s',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: 3
+                  }
+                }}
+                onClick={menu.action}
+              >
+                <CardContent sx={{ textAlign: 'center', p: 3 }}>
+                  {menu.icon}
+                  <Typography variant="h6" sx={{ mt: 2, mb: 1, fontWeight: 'bold' }}>
+                    {menu.title}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {action.description}
+                  <Typography variant="body2" color="text.secondary">
+                    {menu.description}
                   </Typography>
                 </CardContent>
               </Card>
             </Grid>
           ))}
         </Grid>
-
-        {/* 내 매장 목록 */}
-        <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
-          내 매장 ({stores.length})
-        </Typography>
-
-        {loading ? (
-          <Typography>로딩 중...</Typography>
-        ) : stores.length === 0 ? (
-          <Card sx={{ textAlign: 'center', p: 3 }}>
-            <Typography color="text.secondary" sx={{ mb: 2 }}>
-              등록된 매장이 없습니다.
-            </Typography>
-            <Button
-              variant="contained"
-              startIcon={<Add />}
-              onClick={() => navigate('/owner/store/register')}
-            >
-              첫 매장 등록하기
-            </Button>
-          </Card>
-        ) : (
-          <Grid container spacing={2}>
-            {stores.map((store) => (
-              <Grid item xs={12} key={store.id}>
-                <Card>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', gap: 2 }}>
-                      <Avatar
-                        src={store.image || '/images/store-default.jpg'}
-                        sx={{ width: 60, height: 60 }}
-                      />
-                      <Box sx={{ flex: 1 }}>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                          {store.name}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {store.category} • {store.address}
-                        </Typography>
-                        <Chip 
-                          label={store.status === 'ACTIVE' ? '운영중' : '휴업'} 
-                          color={store.status === 'ACTIVE' ? 'success' : 'default'}
-                          size="small"
-                          sx={{ mt: 1 }}
-                        />
-                      </Box>
-                    </Box>
-                    <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
-                      <Button
-                        size="small"
-                        startIcon={<Analytics />}
-                        onClick={() => navigate(`/owner/stores/${store.id}/analytics`)}
-                      >
-                        분석
-                      </Button>
-                      <Button
-                        size="small"
-                        startIcon={<Assignment />}
-                        onClick={() => navigate(`/owner/stores/${store.id}/management`)}
-                      >
-                        관리
-                      </Button>
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        )}
       </Box>
-
+      
       <OwnerNavigation />
     </Box>
   );
