@@ -1,3 +1,4 @@
+//* src/services/api.js
 import axios from 'axios';
 
 // 런타임 설정에서 각 서비스 URL 가져오기
@@ -62,6 +63,7 @@ const createServiceApi = (serviceName) => {
         localStorage.removeItem('token');
         localStorage.removeItem('memberId');
         localStorage.removeItem('role');
+        localStorage.removeItem('selectedStoreId'); // 추가
         window.location.href = '/login';
       }
       return Promise.reject(error);
