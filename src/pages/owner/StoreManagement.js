@@ -1,4 +1,4 @@
-//* src/pages/owner/StoreManagement.js
+//* src/pages/owner/StoreManagement.js - 이미지 처리 수정
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -6,7 +6,6 @@ import {
   Typography, 
   Card, 
   CardContent, 
-  Grid,
   CircularProgress,
   Button,
   List,
@@ -14,18 +13,17 @@ import {
   ListItemIcon,
   ListItemText,
   Divider,
-  Chip,
   Alert
 } from '@mui/material';
 import { 
-  Store,
   Assessment,
   MenuBook,
   RateReview,
   Link,
   Settings,
   Psychology,
-  AutoAwesome
+  AutoAwesome,
+  Store as StoreIcon
 } from '@mui/icons-material';
 import { useSelectedStore } from '../../contexts/SelectedStoreContext';
 import { storeService } from '../../services/storeService';
@@ -34,11 +32,12 @@ import OwnerNavigation from '../../components/common/Navigation';
 
 const StoreManagement = () => {
   const navigate = useNavigate();
-  const { selectedStoreId, setSelectedStoreId } = useSelectedStore();
+  const { selectedStoreId } = useSelectedStore();
   const [store, setStore] = useState(null);
   const [loading, setLoading] = useState(true);
   const [aiAnalysisLoading, setAiAnalysisLoading] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
+  const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
     if (selectedStoreId) {
@@ -49,10 +48,30 @@ const StoreManagement = () => {
   const loadStoreInfo = async () => {
     try {
       setLoading(true);
+      console.log('매장 정보 로드 시작:', selectedStoreId);
+      
       const response = await storeService.getStoreInfo(selectedStoreId);
-      setStore(response.data);
+      console.log('매장 정보 API 응답:', response);
+      
+      // API 응답 구조에 따라 데이터 추출
+      let storeData = null;
+      if (response && response.success && response.data) {
+        storeData = response.data;
+      } else if (response && response.storeId) {
+        // 직접 매장 데이터가 온 경우
+        storeData = response;
+      } else {
+        console.error('예상하지 못한 API 응답 구조:', response);
+        throw new Error('매장 정보를 찾을 수 없습니다.');
+      }
+      
+      setStore(storeData);
+      setImageError(false); // 새로운 매장 데이터 로드 시 이미지 에러 초기화
+      console.log('매장 정보 설정 완료:', storeData);
+      
     } catch (error) {
       console.error('매장 정보 로드 실패:', error);
+      setStore(null);
     } finally {
       setLoading(false);
     }
@@ -62,15 +81,17 @@ const StoreManagement = () => {
   const handleGenerateAIAnalysis = async () => {
     try {
       setAiAnalysisLoading(true);
-      // 실제 백엔드 API 호출: /api/analytics/stores/{storeId}/ai-analysis
+      console.log('AI 분석 생성 요청:', selectedStoreId);
+      
       const response = await analyticsService.generateAIAnalysis(selectedStoreId, {
         days: 30,
         generateActionPlan: true
       });
       
+      console.log('AI 분석 생성 응답:', response);
       setAnalysisResult(response.data);
       
-      // 성공 메시지 표시
+      // 5초 후 성공 메시지 숨김
       setTimeout(() => {
         setAnalysisResult(null);
       }, 5000);
@@ -83,11 +104,24 @@ const StoreManagement = () => {
     }
   };
 
+  // 이미지 에러 핸들러
+  const handleImageError = () => {
+    console.log('이미지 로드 실패');
+    setImageError(true);
+  };
+
+  // 이미지가 있는지 확인하는 함수
+  const hasValidImage = () => {
+    const imageUrl = store?.imageUrl || store?.image;
+    return imageUrl && !imageError && imageUrl.trim() !== '';
+  };
+
   if (loading) {
     return (
       <Box className="mobile-container">
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
           <CircularProgress />
+          <Typography sx={{ ml: 2 }}>매장 정보를 불러오는 중...</Typography>
         </Box>
         <OwnerNavigation />
       </Box>
@@ -98,13 +132,24 @@ const StoreManagement = () => {
     return (
       <Box className="mobile-container">
         <Box sx={{ p: 2, textAlign: 'center' }}>
-          <Typography variant="h6">매장 정보를 찾을 수 없습니다.</Typography>
+          <Typography variant="h6" color="error" sx={{ mb: 2 }}>
+            매장 정보를 찾을 수 없습니다.
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            선택된 매장 ID: {selectedStoreId}
+          </Typography>
           <Button 
             variant="contained" 
-            sx={{ mt: 2 }}
             onClick={() => navigate('/owner/stores')}
+            sx={{ mr: 2 }}
           >
             매장 선택하기
+          </Button>
+          <Button 
+            variant="outlined" 
+            onClick={loadStoreInfo}
+          >
+            다시 시도
           </Button>
         </Box>
         <OwnerNavigation />
@@ -153,28 +198,48 @@ const StoreManagement = () => {
           매장 관리
         </Typography>
         <Typography variant="body2">
-          {store.name}
+          {store.storeName || store.name || '매장명 없음'}
         </Typography>
       </Box>
       
       <Box className="content-area">
         {/* 매장 정보 카드 */}
         <Card sx={{ mb: 3 }}>
-          <Box
-            component="img"
-            sx={{ width: '100%', height: 150, objectFit: 'cover' }}
-            src={store.image || '/images/default-store.jpg'}
-            alt={store.name}
-          />
+          {/* 이미지 영역 - 조건부 렌더링 */}
+          {hasValidImage() ? (
+            <Box
+              component="img"
+              sx={{ width: '100%', height: 150, objectFit: 'cover' }}
+              src={store.imageUrl || store.image}
+              alt={store.storeName || store.name}
+              onError={handleImageError}
+            />
+          ) : (
+            // 이미지가 없거나 로드 실패 시 빈 공간 또는 아이콘
+            <Box
+              sx={{ 
+                width: '100%', 
+                height: 150, 
+                bgcolor: '#f5f5f5',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#999'
+              }}
+            >
+              <StoreIcon sx={{ fontSize: 48 }} />
+            </Box>
+          )}
+          
           <CardContent>
             <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>
-              {store.name}
+              {store.storeName || store.name}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              📍 {store.address || store.location}
+              📍 {store.address || store.location || '주소 정보 없음'}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              📞 {store.phone}
+              📞 {store.phone || '전화번호 없음'}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               🕒 {store.operatingHours || '운영시간 미등록'}
@@ -182,8 +247,20 @@ const StoreManagement = () => {
             
             <Box sx={{ display: 'flex', gap: 2 }}>
               <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#4caf50' }}>
+                  {store.rating || '0.0'}
+                </Typography>
+                <Typography variant="caption">평점</Typography>
+              </Box>
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#2196f3' }}>
+                  {store.reviewCount || 0}
+                </Typography>
+                <Typography variant="caption">리뷰</Typography>
+              </Box>
+              <Box sx={{ textAlign: 'center' }}>
                 <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#ff9800' }}>
-                  {store.status === 'ACTIVE' ? '영업중' : '영업종료'}
+                  {store.status === 'ACTIVE' || store.status === '운영중' ? '영업중' : '영업종료'}
                 </Typography>
                 <Typography variant="caption">상태</Typography>
               </Box>
@@ -278,4 +355,3 @@ const StoreManagement = () => {
 };
 
 export default StoreManagement;
-          
