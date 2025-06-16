@@ -14,7 +14,7 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('token'));
+  const [token, setToken] = useState(sessionStorage.getItem('token')); // localStorage → sessionStorage
   const [loading, setLoading] = useState(true);
 
   const loadUserProfile = async () => {
@@ -33,11 +33,31 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // 토큰 유효성 검증 함수 추가
+  const validateToken = async () => {
+    if (!token) return false;
+    
+    try {
+      // 간단한 API 호출로 토큰 유효성 검증
+      await authApi.get('/api/members/profile');
+      return true;
+    } catch (error) {
+      console.error('토큰 유효성 검증 실패:', error);
+      return false;
+    }
+  };
+
   useEffect(() => {
     const initAuth = async () => {
       if (token) {
-        // 토큰이 있으면 사용자 정보 로드 시도
-        await loadUserProfile();
+        // 토큰 유효성 검증 후 사용자 정보 로드
+        const isValid = await validateToken();
+        if (isValid) {
+          await loadUserProfile();
+        } else {
+          // 유효하지 않은 토큰 제거
+          logout();
+        }
       } else {
         setLoading(false);
       }
@@ -57,10 +77,10 @@ export const AuthProvider = ({ children }) => {
       
       const { accessToken, memberId, role } = response.data;
       
-      // 토큰과 사용자 정보 저장
-      localStorage.setItem('token', accessToken);
-      localStorage.setItem('memberId', memberId.toString());
-      localStorage.setItem('role', role);
+      // sessionStorage에 토큰과 사용자 정보 저장
+      sessionStorage.setItem('token', accessToken);
+      sessionStorage.setItem('memberId', memberId.toString());
+      sessionStorage.setItem('role', role);
       
       setToken(accessToken);
       
@@ -74,7 +94,7 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('로그인 실패:', error);
-      // 로그인 실패 시 모든 로컬 스토리지 정리
+      // 로그인 실패 시 모든 세션 정리
       logout();
       return { 
         success: false, 
@@ -86,10 +106,18 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    // sessionStorage 정리
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('memberId');
+    sessionStorage.removeItem('role');
+    sessionStorage.removeItem('selectedStoreId');
+    
+    // localStorage도 함께 정리 (혹시 남아있을 데이터)
     localStorage.removeItem('token');
     localStorage.removeItem('memberId');
     localStorage.removeItem('role');
     localStorage.removeItem('selectedStoreId');
+    
     setToken(null);
     setUser(null);
     setLoading(false);
@@ -103,9 +131,14 @@ export const AuthProvider = ({ children }) => {
       console.error('회원가입 실패:', error);
       return { 
         success: false, 
-        message: error.response?.data?.message || '회원가입에 실패했습니다.' 
+        message: error.response?.data?.message || '회원가입에 실패했습니다.'
       };
     }
+  };
+
+  // 인증 상태 확인 함수 추가
+  const isAuthenticated = () => {
+    return !!token && !!user;
   };
 
   const value = {
@@ -115,8 +148,8 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     register,
-    loadUserProfile,
-    isAuthenticated: !!token && !!user
+    isAuthenticated,
+    loadUserProfile
   };
 
   return (

@@ -1,62 +1,48 @@
 //* src/components/common/Navigation.js
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   BottomNavigation, 
   BottomNavigationAction, 
   Box, 
-  FormControl, 
   Select, 
-  MenuItem,
+  MenuItem, 
+  FormControl,
   Typography,
-  CircularProgress,
-  Alert
+  CircularProgress
 } from '@mui/material';
-import { Analytics, Store, Person } from '@mui/icons-material';
+import { Assessment, Store, Person } from '@mui/icons-material';
 import { useSelectedStore } from '../../contexts/SelectedStoreContext';
 
 const OwnerNavigation = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { selectedStoreId, setSelectedStoreId, stores, loading, error, refreshStores } = useSelectedStore();
-  
-  // 현재 경로에 따른 네비게이션 value 결정
+  const { selectedStoreId, setSelectedStoreId, stores, loading, refreshStores } = useSelectedStore();
+
+  // 현재 선택된 네비게이션 값 계산
   const getValue = () => {
-    const path = location.pathname;
-    console.log('현재 경로:', path);
-    
-    // 매장관리 관련 경로들 - 두 번째 탭(1)
-    if (path === '/owner/management' ||
-        path.includes('/management') || 
-        path.includes('/menu') || 
-        path.includes('/reviews') || 
-        path.includes('/info') ||
-        (path.includes('/store') && !path.includes('/analytics'))) {
-      return 1;
-    }
-    
-    // 마이페이지 - 세 번째 탭(2)
-    if (path.includes('/mypage')) {
-      return 2;
-    }
-    
-    // 분석 관련 또는 기본 - 첫 번째 탭(0)
-    return 0;
+    if (location.pathname.includes('/owner/analytics')) return 0;
+    if (location.pathname.includes('/owner/management') || 
+        location.pathname.includes('/owner/stores') ||
+        location.pathname === '/owner') return 1;
+    if (location.pathname.includes('/owner/mypage')) return 2;
+    return 0; // 기본값을 분석으로 설정
   };
 
-  const handleStoreChange = (newStoreId) => {
-    console.log('매장 변경:', newStoreId);
-    setSelectedStoreId(newStoreId);
+  // 매장 변경 핸들러
+  const handleStoreChange = (storeId) => {
+    console.log('매장 변경:', storeId);
+    setSelectedStoreId(storeId);
     
-    // 매장 변경 시 현재 페이지가 분석 페이지라면 새 매장의 분석 페이지로 이동
-    if (location.pathname.includes('/analytics/')) {
-      navigate(`/owner/analytics/${newStoreId}`);
+    // 매장 변경 시 해당 매장의 분석 페이지로 이동
+    if (storeId) {
+      navigate(`/owner/analytics/${storeId}`);
     }
   };
 
-  // 네비게이션 버튼 클릭 처리
-  const handleNavigation = (newValue) => {
-    console.log('네비게이션 버튼 클릭:', newValue);
+  // 네비게이션 클릭 핸들러
+  const handleNavigationChange = (event, newValue) => {
+    console.log('네비게이션 클릭:', newValue);
     console.log('현재 경로:', location.pathname);
     console.log('선택된 매장 ID:', selectedStoreId);
     
@@ -120,14 +106,11 @@ const OwnerNavigation = () => {
                 }
               }}
             >
-              {selectedStoreId === null && (
-                <MenuItem value="" disabled>
-                  매장 선택
-                </MenuItem>
-              )}
               {stores.map((store) => (
                 <MenuItem key={store.storeId} value={store.storeId}>
-                  {store.storeName}
+                  <Typography variant="body2">
+                    {store.storeName || store.name || `매장 ${store.storeId}`}
+                  </Typography>
                 </MenuItem>
               ))}
             </Select>
@@ -135,51 +118,30 @@ const OwnerNavigation = () => {
         </Box>
       )}
 
-      {/* 로딩 표시 */}
-      {loading && (
-        <Box 
-          sx={{ 
-            position: 'fixed', 
-            top: 8, 
-            right: 8, 
-            zIndex: 1000,
-            bgcolor: 'rgba(255,255,255,0.95)',
-            borderRadius: 1,
-            padding: '8px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
-          }}
-        >
-          <CircularProgress size={16} />
-        </Box>
-      )}
-
-      {/* 에러 표시 */}
-      {error && (
-        <Box 
-          sx={{ 
-            position: 'fixed', 
-            top: 8, 
-            right: 8, 
-            zIndex: 1000,
-            maxWidth: 200
-          }}
-        >
-          <Alert severity="error" size="small">
-            {error}
-          </Alert>
-        </Box>
-      )}
-
       {/* 하단 네비게이션 */}
-      <BottomNavigation
-        className="bottom-navigation"
-        value={getValue()}
-        onChange={(event, newValue) => handleNavigation(newValue)}
+      <Box
+        sx={{
+          position: 'fixed',
+          bottom: 0,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '100%',
+          maxWidth: 375,
+          zIndex: 1000,
+          bgcolor: 'white',
+          borderTop: 1,
+          borderColor: 'divider'
+        }}
       >
-        <BottomNavigationAction label="분석" icon={<Analytics />} />
-        <BottomNavigationAction label="매장관리" icon={<Store />} />
-        <BottomNavigationAction label="마이페이지" icon={<Person />} />
-      </BottomNavigation>
+        <BottomNavigation
+          value={getValue()}
+          onChange={handleNavigationChange}
+        >
+          <BottomNavigationAction label="분석" icon={<Assessment />} />
+          <BottomNavigationAction label="매장관리" icon={<Store />} />
+          <BottomNavigationAction label="마이페이지" icon={<Person />} />
+        </BottomNavigation>
+      </Box>
     </>
   );
 };

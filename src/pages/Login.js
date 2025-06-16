@@ -1,12 +1,20 @@
 //* src/pages/Login.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, TextField, Button, Typography, Paper, Alert } from '@mui/material';
 import { useAuth } from '../contexts/AuthContext';
+import {
+  Box,
+  TextField,
+  Button,
+  Typography,
+  Paper,
+  Alert
+} from '@mui/material';
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login, isAuthenticated, loading: authLoading } = useAuth();
+  const { login, loading: authLoading, isAuthenticated } = useAuth();
+  
   const [formData, setFormData] = useState({
     username: '',
     password: ''
@@ -14,35 +22,37 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // 이미 로그인된 상태면 리다이렉트
+  // 이미 인증된 사용자 체크 및 리다이렉트
   useEffect(() => {
-    if (isAuthenticated && !authLoading) {
-      navigate('/owner');
+    if (!authLoading && isAuthenticated()) {
+      // `/owner`로 리다이렉트 (올바른 라우트)
+      navigate('/owner', { replace: true });
     }
-  }, [isAuthenticated, authLoading, navigate]);
+  }, [authLoading, isAuthenticated, navigate]);
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-    // 입력 시 에러 메시지 제거
-    if (error) {
-      setError('');
-    }
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    // 에러 메시지 초기화
+    if (error) setError('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading) return;
+
     setLoading(true);
     setError('');
-    
+
     try {
       const result = await login(formData.username, formData.password);
       
       if (result.success) {
-        console.log('로그인 성공, 점주 화면으로 이동');
-        navigate('/owner');
+        // `/owner`로 이동 (올바른 라우트)
+        navigate('/owner', { replace: true });
       } else {
         setError(result.message || '로그인에 실패했습니다.');
       }
@@ -66,6 +76,11 @@ const Login = () => {
         <Typography>로딩 중...</Typography>
       </Box>
     );
+  }
+
+  // 이미 인증된 사용자라면 렌더링하지 않음 (리다이렉트 처리됨)
+  if (isAuthenticated()) {
+    return null;
   }
 
   return (

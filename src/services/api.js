@@ -41,7 +41,8 @@ const createServiceApi = (serviceName) => {
   // 요청 인터셉터 - 토큰 추가
   api.interceptors.request.use(
     (config) => {
-      const token = localStorage.getItem('token');
+      // sessionStorage에서 토큰 가져오기
+      const token = sessionStorage.getItem('token');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -59,12 +60,22 @@ const createServiceApi = (serviceName) => {
     },
     (error) => {
       if (error.response?.status === 401) {
-        // 토큰 만료 시 로그아웃
+        // 토큰 만료 시 완전한 세션 정리
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('memberId');
+        sessionStorage.removeItem('role');
+        sessionStorage.removeItem('selectedStoreId');
+        
+        // localStorage도 함께 정리 (혹시 남아있을 데이터)
         localStorage.removeItem('token');
         localStorage.removeItem('memberId');
         localStorage.removeItem('role');
-        localStorage.removeItem('selectedStoreId'); // 추가
-        window.location.href = '/login';
+        localStorage.removeItem('selectedStoreId');
+        
+        // 현재 페이지가 로그인 페이지가 아닌 경우에만 리다이렉트
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
       }
       return Promise.reject(error);
     }
