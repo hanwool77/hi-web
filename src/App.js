@@ -1,4 +1,4 @@
-//* src/App.js
+//* src/App.js - AIFeedbackDetail 라우트 추가
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
@@ -14,11 +14,11 @@ import PublicRoute from './components/common/PublicRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
 
-// Owner Pages (점주 화면만 우선 사용)
+// Owner Pages
 import OwnerMainPage from './pages/owner/OwnerMainPage';
 import StoreAnalytics from './pages/owner/StoreAnalytics';
 import AIFeedback from './pages/owner/AIFeedback';
-import AIFeedbackDetail from './pages/owner/AIFeedbackDetail';
+import AIFeedbackDetail from './pages/owner/AIFeedbackDetail'; // 새로 추가
 import ActionPlan from './pages/owner/ActionPlan';
 import ActionPlanList from './pages/owner/ActionPlanList';
 import StoreManagement from './pages/owner/StoreManagement';
@@ -44,7 +44,7 @@ const theme = createTheme({
     },
   },
   typography: {
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
   },
 });
 
@@ -55,156 +55,120 @@ function App() {
       <AuthProvider>
         <SelectedStoreProvider>
           <Router>
-            <div className="App">
-              <Routes>
-                {/* 공개 라우트 */}
-                <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-                <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
-                
-                {/* 모든 인증된 사용자는 점주 화면으로 이동 (임시) */}
-                <Route 
-                  path="/" 
-                  element={
-                    <ProtectedRoute>
-                      <OwnerMainPage />
-                    </ProtectedRoute>
-                  } 
-                />
-                
-                {/* 점주 페이지 - 매장 ID 없이 라우팅 */}
-                <Route 
-                  path="/owner" 
-                  element={
-                    <ProtectedRoute>
-                      <OwnerMainPage />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/owner/analytics" 
-                  element={
-                    <ProtectedRoute>
-                      <StoreAnalytics />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/owner/ai-feedback" 
-                  element={
-                    <ProtectedRoute>
-                      <AIFeedback />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/owner/ai-feedback/detail" 
-                  element={
-                    <ProtectedRoute>
-                      <AIFeedbackDetail />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/owner/action-plan" 
-                  element={
-                    <ProtectedRoute>
-                      <ActionPlan />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/owner/action-plan/list" 
-                  element={
-                    <ProtectedRoute>
-                      <ActionPlanList />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/owner/management" 
-                  element={
-                    <ProtectedRoute>
-                      <StoreManagement />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/owner/menu" 
-                  element={
-                    <ProtectedRoute>
-                      <MenuManagement />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/owner/reviews" 
-                  element={
-                    <ProtectedRoute>
-                      <ReviewManagement />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/owner/info" 
-                  element={
-                    <ProtectedRoute>
-                      <StoreInfo />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/owner/store/register" 
-                  element={
-                    <ProtectedRoute>
-                      <StoreRegistration />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/owner/stores" 
-                  element={
-                    <ProtectedRoute>
-                      <StoresList />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/owner/external" 
-                  element={
-                    <ProtectedRoute>
-                      <ExternalIntegration />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/owner/subscription" 
-                  element={
-                    <ProtectedRoute>
-                      <SubscriptionManagement />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/owner/profile" 
-                  element={
-                    <ProtectedRoute>
-                      <ProfileEdit />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/owner/mypage" 
-                  element={
-                    <ProtectedRoute>
-                      <OwnerMyPage />
-                    </ProtectedRoute>
-                  } 
-                />
-                
-                {/* 404 페이지 */}
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </div>
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/login" element={
+                <PublicRoute>
+                  <Login />
+                </PublicRoute>
+              } />
+              <Route path="/register" element={
+                <PublicRoute>
+                  <Register />
+                </PublicRoute>
+              } />
+
+              {/* Owner Protected Routes */}
+              <Route path="/owner" element={
+                <ProtectedRoute requiredRole="OWNER">
+                  <OwnerMainPage />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/owner/analytics/:storeId" element={
+                <ProtectedRoute requiredRole="OWNER">
+                  <StoreAnalytics />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/owner/ai-feedback" element={
+                <ProtectedRoute requiredRole="OWNER">
+                  <AIFeedback />
+                </ProtectedRoute>
+              } />
+              
+              {/* 새로 추가된 AI 피드백 상세 라우트 */}
+              <Route path="/owner/ai-feedback/detail" element={
+                <ProtectedRoute requiredRole="OWNER">
+                  <AIFeedbackDetail />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/owner/action-plan" element={
+                <ProtectedRoute requiredRole="OWNER">
+                  <ActionPlan />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/owner/action-plan/list" element={
+                <ProtectedRoute requiredRole="OWNER">
+                  <ActionPlanList />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/owner/management" element={
+                <ProtectedRoute requiredRole="OWNER">
+                  <StoreManagement />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/owner/menu" element={
+                <ProtectedRoute requiredRole="OWNER">
+                  <MenuManagement />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/owner/reviews" element={
+                <ProtectedRoute requiredRole="OWNER">
+                  <ReviewManagement />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/owner/external" element={
+                <ProtectedRoute requiredRole="OWNER">
+                  <ExternalIntegration />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/owner/store/:storeId/info" element={
+                <ProtectedRoute requiredRole="OWNER">
+                  <StoreInfo />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/owner/store/register" element={
+                <ProtectedRoute requiredRole="OWNER">
+                  <StoreRegistration />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/owner/stores" element={
+                <ProtectedRoute requiredRole="OWNER">
+                  <StoresList />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/owner/subscription" element={
+                <ProtectedRoute requiredRole="OWNER">
+                  <SubscriptionManagement />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/owner/profile" element={
+                <ProtectedRoute requiredRole="OWNER">
+                  <ProfileEdit />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/owner/mypage" element={
+                <ProtectedRoute requiredRole="OWNER">
+                  <OwnerMyPage />
+                </ProtectedRoute>
+              } />
+
+              {/* Default redirect */}
+              <Route path="/" element={<Navigate to="/login" replace />} />
+            </Routes>
           </Router>
         </SelectedStoreProvider>
       </AuthProvider>
