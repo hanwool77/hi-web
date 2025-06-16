@@ -93,9 +93,9 @@ const StoreRegistration = () => {
               </Typography>
               <TextField
                 fullWidth
-                name="name"
+                name="storeName"
                 label="매장명"
-                value={formData.name}
+                value={formData.storeName}
                 onChange={handleChange}
                 margin="normal"
                 required
