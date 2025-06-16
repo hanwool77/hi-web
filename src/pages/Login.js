@@ -1,12 +1,12 @@
 //* src/pages/Login.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, TextField, Button, Typography, Paper, Alert } from '@mui/material';
 import { useAuth } from '../contexts/AuthContext';
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, isAuthenticated, loading: authLoading } = useAuth();
   const [formData, setFormData] = useState({
     username: '',
     password: ''
@@ -14,11 +14,22 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // 이미 로그인된 상태면 리다이렉트
+  useEffect(() => {
+    if (isAuthenticated && !authLoading) {
+      navigate('/owner');
+    }
+  }, [isAuthenticated, authLoading, navigate]);
+
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
+    // 입력 시 에러 메시지 제거
+    if (error) {
+      setError('');
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -27,15 +38,35 @@ const Login = () => {
     setError('');
     
     try {
-      await login(formData.username, formData.password);
-      // 모든 로그인 성공 시 점주 화면으로 이동 (임시)
-      navigate('/owner');
+      const result = await login(formData.username, formData.password);
+      
+      if (result.success) {
+        console.log('로그인 성공, 점주 화면으로 이동');
+        navigate('/owner');
+      } else {
+        setError(result.message || '로그인에 실패했습니다.');
+      }
     } catch (err) {
-      setError('로그인에 실패했습니다. 아이디와 비밀번호를 확인해주세요.');
+      console.error('로그인 처리 중 오류:', err);
+      setError('로그인 처리 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
   };
+
+  // 인증 상태 로딩 중일 때 표시
+  if (authLoading) {
+    return (
+      <Box className="mobile-container" sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '100vh' 
+      }}>
+        <Typography>로딩 중...</Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box className="mobile-container">
@@ -67,6 +98,7 @@ const Login = () => {
               onChange={handleChange}
               margin="normal"
               required
+              disabled={loading}
             />
             
             <TextField
@@ -78,6 +110,7 @@ const Login = () => {
               onChange={handleChange}
               margin="normal"
               required
+              disabled={loading}
             />
             
             <Button
@@ -85,14 +118,14 @@ const Login = () => {
               fullWidth
               variant="contained"
               sx={{ mt: 3, mb: 2 }}
-              disabled={loading}
+              disabled={loading || !formData.username || !formData.password}
             >
               {loading ? '로그인 중...' : '로그인'}
             </Button>
           </form>
           
           <Box sx={{ textAlign: 'center', mt: 2 }}>
-            <Button onClick={() => navigate('/register')}>
+            <Button onClick={() => navigate('/register')} disabled={loading}>
               회원가입
             </Button>
           </Box>

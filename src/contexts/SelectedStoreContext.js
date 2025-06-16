@@ -46,11 +46,20 @@ export const SelectedStoreProvider = ({ children }) => {
       
       if (savedStoreId && storeList.find(store => store.storeId === parseInt(savedStoreId))) {
         // 저장된 매장 ID가 유효하면 사용
-        setSelectedStoreId(parseInt(savedStoreId));
+        const storeId = parseInt(savedStoreId);
+        setSelectedStoreId(storeId);
+        console.log('저장된 매장 ID 사용:', storeId);
       } else if (storeList.length > 0) {
         // 그렇지 않으면 첫 번째 매장 선택
-        setSelectedStoreId(storeList[0].storeId);
-        localStorage.setItem('selectedStoreId', storeList[0].storeId.toString());
+        const firstStoreId = storeList[0].storeId;
+        setSelectedStoreId(firstStoreId);
+        localStorage.setItem('selectedStoreId', firstStoreId.toString());
+        console.log('첫 번째 매장 자동 선택:', firstStoreId);
+      } else {
+        // 매장이 없는 경우
+        setSelectedStoreId(null);
+        localStorage.removeItem('selectedStoreId');
+        console.log('매장이 없음');
       }
     } catch (error) {
       console.error('매장 목록 로드 실패:', error);
@@ -59,6 +68,7 @@ export const SelectedStoreProvider = ({ children }) => {
       // 에러 발생 시에도 빈 배열로 설정
       setStores([]);
       setSelectedStoreId(null);
+      localStorage.removeItem('selectedStoreId');
     } finally {
       setLoading(false);
     }
@@ -66,6 +76,7 @@ export const SelectedStoreProvider = ({ children }) => {
 
   // 매장 ID 변경 시 로컬스토리지에 저장
   const handleSetSelectedStoreId = (storeId) => {
+    console.log('매장 ID 변경:', storeId);
     setSelectedStoreId(storeId);
     if (storeId) {
       localStorage.setItem('selectedStoreId', storeId.toString());
@@ -76,6 +87,7 @@ export const SelectedStoreProvider = ({ children }) => {
 
   // 매장 목록 새로고침 함수
   const refreshStores = () => {
+    console.log('매장 목록 새로고침');
     loadMyStores();
   };
 
