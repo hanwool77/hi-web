@@ -60,7 +60,7 @@ const StoreRegistration = () => {
     try {
       await storeService.createStore(formData);
       alert('매장이 등록되었습니다.');
-      navigate('/owner/stores');
+      navigate('/owner/store-registration');
     } catch (error) {
       console.error('매장 등록 실패:', error);
       setError(error.response?.data?.message || '매장 등록에 실패했습니다.');
