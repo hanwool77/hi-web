@@ -134,7 +134,7 @@ const StoreAnalytics = () => {
     // customerAgeDistribution이 있는 경우
     if (statistics.customerAgeDistribution) {
       return Object.entries(statistics.customerAgeDistribution).map(([age, count]) => ({
-        age: `${age}대`,
+        age: `${age}`,
         count: count
       }));
     }
