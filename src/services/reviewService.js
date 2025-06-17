@@ -35,21 +35,28 @@ export const reviewService = {
       });
       
       console.log('API 응답 원본:', response);
-      
-      // API 설계서에 따르면 직접 List<ReviewListResponse>를 반환하므로
-      // response.data가 배열이어야 함
       return response.data;
       
     } catch (error) {
       console.error('매장 리뷰 조회 실패:', error);
       
-      // 에러 발생 시 빈 배열 반환
       if (error.response && error.response.status === 404) {
         console.warn('해당 매장의 리뷰가 없습니다.');
         return [];
       }
       
       throw error;
+    }
+  },
+
+  // 리뷰 댓글 목록 조회 (추가됨)
+  getReviewComments: async (reviewId) => {
+    try {
+      const response = await reviewApi.get(`/api/reviews/${reviewId}/comments`);
+      return response.data;
+    } catch (error) {
+      console.error('리뷰 댓글 조회 실패:', error);
+      return [];
     }
   },
 
@@ -93,24 +100,20 @@ export const reviewService = {
     return response.data;
   },
 
-  // 리뷰 댓글 작성 (답글 작성)
-  replyToReview: async (reviewId, content) => {
-    const response = await reviewApi.post(`/api/reviews/${reviewId}/comments`, {
-      content
-    });
-    return response.data;
-  },
-
-  // 리뷰 댓글 작성
+  // 리뷰 댓글 작성 (수정됨)
   createComment: async (reviewId, content) => {
+    console.log('댓글 작성 API 호출:', { reviewId, content });
+    
     const response = await reviewApi.post(`/api/reviews/${reviewId}/comments`, {
       content
     });
     return response.data;
   },
 
-  // 리뷰 댓글 수정
+  // 리뷰 댓글 수정 (수정됨)
   updateComment: async (reviewId, commentId, content) => {
+    console.log('댓글 수정 API 호출:', { reviewId, commentId, content });
+    
     const response = await reviewApi.put(`/api/reviews/${reviewId}/comments/${commentId}`, {
       content
     });
@@ -121,5 +124,10 @@ export const reviewService = {
   deleteComment: async (reviewId, commentId) => {
     const response = await reviewApi.delete(`/api/reviews/${reviewId}/comments/${commentId}`);
     return response.data;
+  },
+
+  // 답글 작성 (createComment와 동일, 호환성을 위해 추가)
+  replyToReview: async (reviewId, content) => {
+    return await reviewService.createComment(reviewId, content);
   }
 };

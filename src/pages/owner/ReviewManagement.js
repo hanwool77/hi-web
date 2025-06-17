@@ -51,26 +51,59 @@ const ReviewManagement = () => {
       let reviewData = [];
       
       if (response && Array.isArray(response)) {
-        // 직접 배열이 반환된 경우
         reviewData = response;
       } else if (response && response.data && Array.isArray(response.data)) {
-        // data 프로퍼티 안에 배열이 있는 경우
         reviewData = response.data;
       } else if (response && response.success && Array.isArray(response.data)) {
-        // success 래퍼가 있는 경우
         reviewData = response.data;
       } else {
         console.warn('예상하지 못한 응답 구조:', response);
         reviewData = [];
       }
       
-      console.log('처리된 리뷰 데이터:', reviewData);
-      setReviews(reviewData);
+      // 각 리뷰에 대해 댓글 정보도 함께 로드
+      const reviewsWithComments = await Promise.all(
+        reviewData.map(async (review) => {
+          try {
+            // reviewId 필드명 통일 (reviewId 또는 id)
+            const reviewId = review.reviewId || review.id;
+            
+            if (reviewId) {
+              const comments = await reviewService.getReviewComments(reviewId);
+              // 점주 댓글만 필터링 (첫 번째 댓글을 점주 답글로 처리)
+              const ownerComment = comments && comments.length > 0 ? comments[0] : null;
+              
+              return {
+                ...review,
+                reviewId: reviewId, // ID 필드 통일
+                ownerReply: ownerComment ? ownerComment.content : null,
+                ownerCommentId: ownerComment ? ownerComment.commentId : null
+              };
+            }
+            return {
+              ...review,
+              reviewId: reviewId,
+              ownerReply: null,
+              ownerCommentId: null
+            };
+          } catch (error) {
+            console.error('댓글 로드 실패:', error);
+            return {
+              ...review,
+              reviewId: review.reviewId || review.id,
+              ownerReply: null,
+              ownerCommentId: null
+            };
+          }
+        })
+      );
+      
+      console.log('처리된 리뷰 데이터 (댓글 포함):', reviewsWithComments);
+      setReviews(reviewsWithComments);
       
     } catch (error) {
       console.error('리뷰 목록 로드 실패:', error);
       
-      // 에러 상세 정보 로깅
       if (error.response) {
         console.error('API 응답 에러:', error.response.status, error.response.data);
       }
@@ -82,20 +115,45 @@ const ReviewManagement = () => {
   };
 
   const handleReply = (review) => {
+    console.log('답글 작성 대상 리뷰:', review);
     setReplyDialog({ open: true, review });
     setReplyText(review.ownerReply || '');
   };
 
   const handleSaveReply = async () => {
     try {
-      await reviewService.replyToReview(replyDialog.review.id, replyText);
+      console.log('답글 저장 시작:', {
+        reviewId: replyDialog.review.reviewId,
+        content: replyText
+      });
+      
+      // reviewId 확인
+      const reviewId = replyDialog.review.reviewId || replyDialog.review.id;
+      
+      if (!reviewId) {
+        alert('리뷰 ID를 찾을 수 없습니다.');
+        return;
+      }
+      
+      // 기존 댓글이 있으면 수정, 없으면 새로 작성
+      if (replyDialog.review.ownerCommentId) {
+        // 댓글 수정
+        await reviewService.updateComment(reviewId, replyDialog.review.ownerCommentId, replyText);
+      } else {
+        // 댓글 작성
+        await reviewService.createComment(reviewId, replyText);
+      }
+      
       setReplyDialog({ open: false, review: null });
       setReplyText('');
-      loadReviews();
+      
+      // 리뷰 목록 다시 로드하여 업데이트된 댓글 반영
+      await loadReviews();
+      
       alert('답글이 저장되었습니다.');
     } catch (error) {
       console.error('답글 저장 실패:', error);
-      alert('답글 저장에 실패했습니다.');
+      alert('답글 저장에 실패했습니다: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -205,6 +263,14 @@ const ReviewManagement = () => {
                       긍정 리뷰
                     </Typography>
                   </Box>
+                  <Box sx={{ textAlign: 'center' }}>
+                    <Typography variant="h4" color="info.main">
+                      {reviews.filter(r => r.ownerReply).length}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      답글 완료
+                    </Typography>
+                  </Box>
                 </Box>
               </CardContent>
             </Card>
@@ -221,7 +287,7 @@ const ReviewManagement = () => {
                       </Avatar>
                       <Box sx={{ flex: 1 }}>
                         <Typography variant="subtitle2">
-                          {review.authorName || '익명'}
+                          {review.memberNickname || review.authorName || '익명'}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
                           {formatDate(review.createdAt)}
@@ -243,6 +309,26 @@ const ReviewManagement = () => {
                     <Typography variant="body2" sx={{ mb: 2 }}>
                       {review.content || '리뷰 내용이 없습니다.'}
                     </Typography>
+
+                    {/* 좋아요/싫어요 카운트 */}
+                    <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Typography variant="body2" sx={{ color: 'success.main' }}>
+                          👍
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {review.likeCount || 0}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Typography variant="body2" sx={{ color: 'error.main' }}>
+                          👎
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {review.dislikeCount || 0}
+                        </Typography>
+                      </Box>
+                    </Box>
 
                     {/* 플랫폼 정보 */}
                     {review.platform && (
@@ -323,13 +409,21 @@ const ReviewManagement = () => {
               value={replyText}
               onChange={(e) => setReplyText(e.target.value)}
               placeholder="고객에게 정중하고 친절한 답글을 작성해주세요."
+              inputProps={{ maxLength: 100 }}
             />
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+              {replyText.length}/100자 (10자 이상 100자 미만)
+            </Typography>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setReplyDialog({ open: false, review: null })}>
               취소
             </Button>
-            <Button onClick={handleSaveReply} variant="contained">
+            <Button 
+              onClick={handleSaveReply} 
+              variant="contained"
+              disabled={replyText.length < 10 || replyText.length >= 100}
+            >
               저장
             </Button>
           </DialogActions>
