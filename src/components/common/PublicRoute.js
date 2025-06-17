@@ -14,7 +14,7 @@ const PublicRoute = ({ children }) => {
   if (token && user) {
     if (user.role === 'OWNER') {
       return <Navigate to="/owner" replace />;
-    } else {
+    } else if (user.role === 'USER') {
       return <Navigate to="/" replace />;
     }
   }

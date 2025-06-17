@@ -38,8 +38,8 @@ const ProtectedRoute = ({ children, requireOwner = false }) => {
   }
 
   // 고객이 점주 페이지에 접근하려고 하면 메인 페이지로
-  if (!requireOwner && user?.role === 'OWNER' && window.location.pathname.startsWith('/owner')) {
-    return <Navigate to="/owner" replace />;
+  if (user?.role === 'USER' && window.location.pathname.startsWith('/owner')) {
+  return <Navigate to="/" replace />;
   }
 
   return children;

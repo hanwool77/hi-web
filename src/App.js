@@ -32,6 +32,8 @@ import SubscriptionManagement from './pages/owner/SubscriptionManagement';
 import ProfileEdit from './pages/owner/ProfileEdit';
 import OwnerMyPage from './pages/owner/OwnerMyPage';
 
+import MainPage from './pages/customer/MainPage';
+
 import './App.css';
 
 const theme = createTheme({
@@ -167,7 +169,15 @@ function App() {
               } />
 
               {/* Default redirect */}
-              <Route path="/" element={<Navigate to="/login" replace />} />
+              {/* Customer Main Route */}
+              <Route path="/" element={
+                <ProtectedRoute>
+                  <MainPage />
+                </ProtectedRoute>
+              } />
+
+              {/* 404 처리 */}
+              <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
           </Router>
         </SelectedStoreProvider>

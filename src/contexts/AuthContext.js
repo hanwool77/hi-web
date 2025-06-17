@@ -84,21 +84,21 @@ export const AuthProvider = ({ children }) => {
       
       setToken(accessToken);
       
-      // 사용자 프로필 로드
-      const profileLoaded = await loadUserProfile();
+      // 사용자 정보 설정 (프로필 로드 없이 바로 설정)
+      setUser({
+        memberId,
+        role,
+        username
+      });
       
-      if (profileLoaded) {
-        return { success: true, role };
-      } else {
-        throw new Error('사용자 정보 로드 실패');
-      }
+      return { success: true, role };
     } catch (error) {
       console.error('로그인 실패:', error);
       // 로그인 실패 시 모든 세션 정리
       logout();
       return { 
         success: false, 
-        message: error.response?.data?.message || '로그인에 실패했습니다.' 
+        message: error.response?.data?.message || '로그인에 실패했습니다.'
       };
     } finally {
       setLoading(false);

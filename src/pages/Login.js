@@ -13,7 +13,7 @@ import {
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login, loading: authLoading, isAuthenticated } = useAuth();
+  const { user, login, loading: authLoading, isAuthenticated } = useAuth();
   
   const [formData, setFormData] = useState({
     username: '',
@@ -24,11 +24,14 @@ const Login = () => {
 
   // 이미 인증된 사용자 체크 및 리다이렉트
   useEffect(() => {
-    if (!authLoading && isAuthenticated()) {
-      // `/owner`로 리다이렉트 (올바른 라우트)
+  if (!authLoading && isAuthenticated() && user) {
+    if (user.role === 'OWNER') {
       navigate('/owner', { replace: true });
+    } else {
+      navigate('/', { replace: true }); // 고객은 메인 페이지로
     }
-  }, [authLoading, isAuthenticated, navigate]);
+  }
+  }, [authLoading, isAuthenticated, user, navigate]); 
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -51,8 +54,12 @@ const Login = () => {
       const result = await login(formData.username, formData.password);
       
       if (result.success) {
-        // `/owner`로 이동 (올바른 라우트)
-        navigate('/owner', { replace: true });
+      // ✅ 로그인 성공 시 역할에 따른 리다이렉트
+        if (result.role === 'OWNER') {
+          navigate('/owner', { replace: true });
+        } else {
+          navigate('/', { replace: true }); // 고객은 메인 페이지로
+        }
       } else {
         setError(result.message || '로그인에 실패했습니다.');
       }
