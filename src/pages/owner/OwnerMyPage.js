@@ -37,7 +37,7 @@ const OwnerMyPage = () => {
       icon: <Store sx={{ fontSize: 40, color: '#2196f3' }} />,
       title: '내 매장 목록',
       description: '등록된 매장 목록 관리',
-      action: () => navigate('/owner/stores')
+      action: () => navigate('/owner/stores-list')
     },
     {
       icon: <Subscriptions sx={{ fontSize: 40, color: '#ff9800' }} />,
