@@ -1,3 +1,4 @@
+//* src/services/storeService.js
 import { storeApi } from './api';
 
 export const storeService = {
@@ -20,6 +21,19 @@ export const storeService = {
   getMyStores: async () => {
     try {
       const response = await storeApi.get('/api/stores/my');
+      console.log('getMyStores API 응답:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('매장 목록 조회 실패:', error);
+      throw error;
+    }
+  },
+
+  // ✅ StoresList.js에서 사용하는 getOwnerStores 메서드 추가 (getMyStores와 동일)
+  getOwnerStores: async () => {
+    try {
+      const response = await storeApi.get('/api/stores/my');
+      console.log('getOwnerStores API 응답:', response.data);
       return response.data;
     } catch (error) {
       console.error('매장 목록 조회 실패:', error);

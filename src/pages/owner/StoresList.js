@@ -21,11 +21,26 @@ const StoresList = () => {
   const loadOwnerStores = async () => {
     try {
       setLoading(true);
-      const response = await storeService.getOwnerStores();
+      // ✅ getOwnerStores() → getMyStores()로 변경
+      const response = await storeService.getMyStores();
       console.log('매장 목록 응답:', response);
-      setStores(response.data || []);
+      
+      // ✅ 응답 구조 확인 및 적절한 데이터 설정
+      if (response && response.success && response.data) {
+        setStores(response.data);
+      } else if (response && Array.isArray(response.data)) {
+        // 백엔드에서 직접 배열을 반환하는 경우
+        setStores(response.data);
+      } else if (response && Array.isArray(response)) {
+        // response 자체가 배열인 경우
+        setStores(response);
+      } else {
+        console.warn('예상과 다른 응답 형식:', response);
+        setStores([]);
+      }
     } catch (error) {
       console.error('매장 목록 로드 실패:', error);
+      console.error('에러 상세:', error.response?.data);
       setStores([]);
     } finally {
       setLoading(false);
