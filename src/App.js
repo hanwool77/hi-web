@@ -37,6 +37,7 @@ import MainPage from './pages/customer/MainPage';
 import StoreDetail from './pages/customer/StoreDetail';
 // import CustomerMyPage from './pages/customer/CustomerMyPage'; // 파일이 존재하지 않음
 import PreferenceSettings from './pages/customer/PreferenceSettings';
+import MyPage from './pages/customer/MyPage';
 
 // Common Pages
 // import NotFound from './pages/NotFound'; // 파일이 존재하지 않음
@@ -77,26 +78,29 @@ function App() {
                 </PublicRoute>
               } />
 
-              {/* Customer Routes */}
-              <Route path="/customer" element={
-                <ProtectedRoute requiredRole="CUSTOMER">
+              {/* Customer Routes - requiredRole을 "USER"로 수정 */}
+              <Route path="/customer/main" element={
+                <ProtectedRoute requiredRole="USER">
                   <MainPage />
                 </ProtectedRoute>
               } />
+              <Route path="/customer" element={
+                <ProtectedRoute requiredRole="USER">
+                  <MainPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/customer/mypage" element={
+                <ProtectedRoute requiredRole="USER">
+                  <MyPage />
+                </ProtectedRoute>
+              } />
               <Route path="/customer/store/:storeId" element={
-                <ProtectedRoute requiredRole="CUSTOMER">
+                <ProtectedRoute requiredRole="USER">
                   <StoreDetail />
                 </ProtectedRoute>
               } />
-              {/* CustomerMyPage 컴포넌트가 존재하지 않아 주석처리
-              <Route path="/customer/mypage" element={
-                <ProtectedRoute requiredRole="CUSTOMER">
-                  <CustomerMyPage />
-                </ProtectedRoute>
-              } />
-              */}
               <Route path="/customer/preferences" element={
-                <ProtectedRoute requiredRole="CUSTOMER">
+                <ProtectedRoute requiredRole="USER">
                   <PreferenceSettings />
                 </ProtectedRoute>
               } />

@@ -1,4 +1,4 @@
-//* src/contexts/AuthContext.js
+//* src/contexts/AuthContext.js (수정된 버전)
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authApi } from '../services/api';
 
@@ -14,18 +14,24 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(sessionStorage.getItem('token')); // localStorage → sessionStorage
+  const [token, setToken] = useState(sessionStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
 
   const loadUserProfile = async () => {
     try {
       setLoading(true);
       const response = await authApi.get('/api/members/profile');
-      setUser(response.data);
+      
+      // ✅ 기존 user 정보와 서버 응답을 병합 (role 정보 보존)
+      setUser(prevUser => ({
+        ...prevUser, // 기존 정보 유지 (특히 role)
+        ...response.data, // 서버에서 받은 새 정보로 업데이트
+        role: prevUser?.role || response.data.role // role은 기존 값 우선 사용
+      }));
+      
       return true;
     } catch (error) {
       console.error('사용자 정보 로드 실패:', error);
-      // 프로필 로드 실패 시 토큰 제거
       logout();
       return false;
     } finally {
@@ -33,12 +39,10 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // 토큰 유효성 검증 함수 추가
   const validateToken = async () => {
     if (!token) return false;
     
     try {
-      // 간단한 API 호출로 토큰 유효성 검증
       await authApi.get('/api/members/profile');
       return true;
     } catch (error) {
@@ -50,12 +54,23 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const initAuth = async () => {
       if (token) {
-        // 토큰 유효성 검증 후 사용자 정보 로드
+        // ✅ sessionStorage에서 저장된 role 정보 먼저 복원
+        const savedRole = sessionStorage.getItem('role');
+        const savedMemberId = sessionStorage.getItem('memberId');
+        
+        if (savedRole && savedMemberId) {
+          // 먼저 저장된 정보로 user 설정
+          setUser({
+            memberId: parseInt(savedMemberId),
+            role: savedRole,
+            username: '' // 나중에 loadUserProfile에서 업데이트
+          });
+        }
+        
         const isValid = await validateToken();
         if (isValid) {
           await loadUserProfile();
         } else {
-          // 유효하지 않은 토큰 제거
           logout();
         }
       } else {
@@ -77,42 +92,39 @@ export const AuthProvider = ({ children }) => {
       
       const { accessToken, memberId, role } = response.data;
       
-      // sessionStorage에 토큰과 사용자 정보 저장
       sessionStorage.setItem('token', accessToken);
       sessionStorage.setItem('memberId', memberId.toString());
       sessionStorage.setItem('role', role);
       
       setToken(accessToken);
       
-      // 사용자 정보 설정 (프로필 로드 없이 바로 설정)
+      // ✅ 사용자 정보 설정
       setUser({
         memberId,
         role,
         username
       });
       
+      // ✅ loadUserProfile 호출하지 않음 (role 덮어쓰기 방지)
+      setLoading(false);
+      
       return { success: true, role };
     } catch (error) {
       console.error('로그인 실패:', error);
-      // 로그인 실패 시 모든 세션 정리
       logout();
       return { 
         success: false, 
         message: error.response?.data?.message || '로그인에 실패했습니다.'
       };
-    } finally {
-      setLoading(false);
     }
   };
 
   const logout = () => {
-    // sessionStorage 정리
     sessionStorage.removeItem('token');
     sessionStorage.removeItem('memberId');
     sessionStorage.removeItem('role');
     sessionStorage.removeItem('selectedStoreId');
     
-    // localStorage도 함께 정리 (혹시 남아있을 데이터)
     localStorage.removeItem('token');
     localStorage.removeItem('memberId');
     localStorage.removeItem('role');
@@ -136,7 +148,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // 인증 상태 확인 함수 추가
   const isAuthenticated = () => {
     return !!token && !!user;
   };
