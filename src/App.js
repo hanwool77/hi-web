@@ -1,4 +1,4 @@
-//* src/App.js - AIFeedbackDetail 라우트 추가
+//* src/App.js - AIFeedbackDetail 라우트 feedbackId 파라미터 추가
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
@@ -18,7 +18,7 @@ import Register from './pages/Register';
 import OwnerMainPage from './pages/owner/OwnerMainPage';
 import StoreAnalytics from './pages/owner/StoreAnalytics';
 import AIFeedback from './pages/owner/AIFeedback';
-import AIFeedbackDetail from './pages/owner/AIFeedbackDetail'; // 새로 추가
+import AIFeedbackDetail from './pages/owner/AIFeedbackDetail';
 import ActionPlan from './pages/owner/ActionPlan';
 import ActionPlanList from './pages/owner/ActionPlanList';
 import StoreManagement from './pages/owner/StoreManagement';
@@ -32,10 +32,16 @@ import SubscriptionManagement from './pages/owner/SubscriptionManagement';
 import ProfileEdit from './pages/owner/ProfileEdit';
 import OwnerMyPage from './pages/owner/OwnerMyPage';
 
+// Customer Pages  
 import MainPage from './pages/customer/MainPage';
+import StoreDetail from './pages/customer/StoreDetail';
+// import CustomerMyPage from './pages/customer/CustomerMyPage'; // 파일이 존재하지 않음
+import PreferenceSettings from './pages/customer/PreferenceSettings';
 
-import './App.css';
+// Common Pages
+// import NotFound from './pages/NotFound'; // 파일이 존재하지 않음
 
+// MUI 테마 설정
 const theme = createTheme({
   palette: {
     primary: {
@@ -46,7 +52,7 @@ const theme = createTheme({
     },
   },
   typography: {
-    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
   },
 });
 
@@ -59,6 +65,7 @@ function App() {
           <Router>
             <Routes>
               {/* Public Routes */}
+              <Route path="/" element={<Navigate to="/login" replace />} />
               <Route path="/login" element={
                 <PublicRoute>
                   <Login />
@@ -70,114 +77,123 @@ function App() {
                 </PublicRoute>
               } />
 
-              {/* Owner Protected Routes */}
+              {/* Customer Routes */}
+              <Route path="/customer" element={
+                <ProtectedRoute requiredRole="CUSTOMER">
+                  <MainPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/customer/store/:storeId" element={
+                <ProtectedRoute requiredRole="CUSTOMER">
+                  <StoreDetail />
+                </ProtectedRoute>
+              } />
+              {/* CustomerMyPage 컴포넌트가 존재하지 않아 주석처리
+              <Route path="/customer/mypage" element={
+                <ProtectedRoute requiredRole="CUSTOMER">
+                  <CustomerMyPage />
+                </ProtectedRoute>
+              } />
+              */}
+              <Route path="/customer/preferences" element={
+                <ProtectedRoute requiredRole="CUSTOMER">
+                  <PreferenceSettings />
+                </ProtectedRoute>
+              } />
+
+              {/* Owner Routes */}
               <Route path="/owner" element={
                 <ProtectedRoute requiredRole="OWNER">
                   <OwnerMainPage />
                 </ProtectedRoute>
               } />
-              
               <Route path="/owner/analytics/:storeId" element={
                 <ProtectedRoute requiredRole="OWNER">
                   <StoreAnalytics />
                 </ProtectedRoute>
               } />
-              
               <Route path="/owner/ai-feedback" element={
                 <ProtectedRoute requiredRole="OWNER">
                   <AIFeedback />
                 </ProtectedRoute>
               } />
-              
-              {/* 새로 추가된 AI 피드백 상세 라우트 */}
+              {/* feedbackId 파라미터 추가 */}
+              <Route path="/owner/ai-feedback/detail/:feedbackId" element={
+                <ProtectedRoute requiredRole="OWNER">
+                  <AIFeedbackDetail />
+                </ProtectedRoute>
+              } />
+              {/* 기존 라우트도 유지 (하위 호환성) */}
               <Route path="/owner/ai-feedback/detail" element={
                 <ProtectedRoute requiredRole="OWNER">
                   <AIFeedbackDetail />
                 </ProtectedRoute>
               } />
-              
               <Route path="/owner/action-plan" element={
                 <ProtectedRoute requiredRole="OWNER">
                   <ActionPlan />
                 </ProtectedRoute>
               } />
-              
               <Route path="/owner/action-plan/list" element={
                 <ProtectedRoute requiredRole="OWNER">
                   <ActionPlanList />
                 </ProtectedRoute>
               } />
-              
-              <Route path="/owner/management" element={
+              <Route path="/owner/store-management" element={
                 <ProtectedRoute requiredRole="OWNER">
                   <StoreManagement />
                 </ProtectedRoute>
               } />
-              
-              <Route path="/owner/menu" element={
+              <Route path="/owner/menu-management" element={
                 <ProtectedRoute requiredRole="OWNER">
                   <MenuManagement />
                 </ProtectedRoute>
               } />
-              
-              <Route path="/owner/reviews" element={
+              <Route path="/owner/review-management" element={
                 <ProtectedRoute requiredRole="OWNER">
                   <ReviewManagement />
                 </ProtectedRoute>
               } />
-              
-              <Route path="/owner/external" element={
+              <Route path="/owner/external-integration" element={
                 <ProtectedRoute requiredRole="OWNER">
                   <ExternalIntegration />
                 </ProtectedRoute>
               } />
-              
-              <Route path="/owner/store/:storeId/info" element={
+              <Route path="/owner/store-info" element={
                 <ProtectedRoute requiredRole="OWNER">
                   <StoreInfo />
                 </ProtectedRoute>
               } />
-              
-              <Route path="/owner/store/register" element={
+              <Route path="/owner/store-registration" element={
                 <ProtectedRoute requiredRole="OWNER">
                   <StoreRegistration />
                 </ProtectedRoute>
               } />
-              
-              <Route path="/owner/stores" element={
+              <Route path="/owner/stores-list" element={
                 <ProtectedRoute requiredRole="OWNER">
                   <StoresList />
                 </ProtectedRoute>
               } />
-              
               <Route path="/owner/subscription" element={
                 <ProtectedRoute requiredRole="OWNER">
                   <SubscriptionManagement />
                 </ProtectedRoute>
               } />
-              
               <Route path="/owner/profile" element={
                 <ProtectedRoute requiredRole="OWNER">
                   <ProfileEdit />
                 </ProtectedRoute>
               } />
-              
               <Route path="/owner/mypage" element={
                 <ProtectedRoute requiredRole="OWNER">
                   <OwnerMyPage />
                 </ProtectedRoute>
               } />
 
-              {/* Default redirect */}
-              {/* Customer Main Route */}
-              <Route path="/" element={
-                <ProtectedRoute>
-                  <MainPage />
-                </ProtectedRoute>
-              } />
-
-              {/* 404 처리 */}
-              <Route path="*" element={<Navigate to="/login" replace />} />
+              {/* 404 Page - NotFound 컴포넌트가 존재하지 않아 주석처리
+              <Route path="*" element={<NotFound />} />
+              */}
+              <Route path="*" element={<div>404 - Page Not Found</div>} />
             </Routes>
           </Router>
         </SelectedStoreProvider>

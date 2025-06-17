@@ -32,14 +32,32 @@ const AIFeedback = () => {
   const loadAIFeedbacks = async () => {
     try {
       setLoading(true);
-      const response = await analyticsService.getAIFeedback(selectedStoreId);
-      setFeedbacks(response.data || []);
+      
+      // 실제 AI 피드백 상세 데이터 로드
+      const response = await analyticsService.getAIFeedbackDetail(selectedStoreId);
+      console.log('AI 피드백 응답:', response);
+      
+      // 실제 데이터 구조에 맞게 처리
+      if (response.data) {
+        // 하나의 피드백 객체인 경우 배열로 변환
+        const feedbackData = Array.isArray(response.data) ? response.data : [response.data];
+        setFeedbacks(feedbackData);
+      } else {
+        setFeedbacks([]);
+      }
+      
     } catch (error) {
       console.error('AI 피드백 로드 실패:', error);
       setError('AI 피드백을 불러오는데 실패했습니다.');
+      setFeedbacks([]);
     } finally {
       setLoading(false);
     }
+  };
+
+  // AI 피드백 상세보기 - feedbackId와 함께 네비게이션
+  const handleFeedbackDetail = (feedbackId) => {
+    navigate(`/owner/ai-feedback/detail/${feedbackId}`);
   };
 
   if (loading) {
@@ -161,12 +179,24 @@ const AIFeedback = () => {
               </Card>
             ))}
 
-            {/* 더보기 버튼 */}
+            {/* 더보기 버튼 - feedbackId와 함께 네비게이션 */}
             <Button
               fullWidth
               variant="contained"
               startIcon={<TrendingUp />}
-              onClick={() => navigate('/owner/ai-feedback/detail')}
+              onClick={() => {
+                // 실제 피드백 데이터가 있으면 해당 ID 사용, 없으면 기본값 사용
+                const feedbackId = feedbacks.length > 0 && feedbacks[0].id 
+                  ? feedbacks[0].id 
+                  : feedbacks.length > 0 && feedbacks[0].feedbackId
+                  ? feedbacks[0].feedbackId
+                  : 1; // 기본값
+                
+                console.log('네비게이션할 feedbackId:', feedbackId);
+                console.log('현재 feedbacks:', feedbacks);
+                
+                handleFeedbackDetail(feedbackId);
+              }}
               sx={{ mt: 2, mb: 2 }}
             >
               상세 AI 피드백 및 실행 계획 보기

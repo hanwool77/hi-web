@@ -1,6 +1,6 @@
 //* src/pages/owner/AIFeedbackDetail.js
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { 
   Box, 
   Typography, 
@@ -13,7 +13,10 @@ import {
   Alert,
   List,
   ListItem,
-  ListItemText
+  ListItemText,
+  Checkbox,
+  FormControlLabel,
+  Button
 } from '@mui/material';
 import { 
   ArrowBack, 
@@ -21,7 +24,8 @@ import {
   TrendingUp,
   TrendingDown,
   Star,
-  Assessment
+  Assessment,
+  PlayArrow
 } from '@mui/icons-material';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { analyticsService } from '../../services/analyticsService';
@@ -33,10 +37,13 @@ const COLORS = ['#00C49F', '#FFBB28', '#FF8042', '#0088FE', '#8884D8'];
 const AIFeedbackDetail = () => {
   const navigate = useNavigate();
   const { selectedStoreId } = useSelectedStore();
+  const { feedbackId } = useParams(); // URL에서 feedbackId 가져오기
   const [aiFeedback, setAiFeedback] = useState(null);
   const [reviewAnalysis, setReviewAnalysis] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedImprovements, setSelectedImprovements] = useState([]); // 선택된 개선사항들
+  const [actionPlanLoading, setActionPlanLoading] = useState(false); // 실행계획 생성 로딩 상태
 
   useEffect(() => {
     if (selectedStoreId) {
@@ -68,6 +75,64 @@ const AIFeedbackDetail = () => {
       setError('AI 피드백 데이터를 불러오는데 실패했습니다.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 개선사항 체크박스 변경 핸들러
+  const handleImprovementChange = (improvement, checked) => {
+    setSelectedImprovements(prev => {
+      if (checked) {
+        return [...prev, improvement];
+      } else {
+        return prev.filter(item => item !== improvement);
+      }
+    });
+  };
+
+  // 실행계획 생성 API 호출
+  const handleGenerateActionPlan = async () => {
+    if (selectedImprovements.length === 0) {
+      alert('개선사항을 선택해주세요.');
+      return;
+    }
+
+    // feedbackId 확인 및 검증
+    const currentFeedbackId = feedbackId || aiFeedback?.id || aiFeedback?.feedbackId || 1;
+    
+    console.log('사용할 feedbackId:', currentFeedbackId);
+    console.log('URL feedbackId:', feedbackId);
+    console.log('aiFeedback 객체:', aiFeedback);
+
+    if (!currentFeedbackId) {
+      alert('피드백 ID를 찾을 수 없습니다. 다시 시도해주세요.');
+      return;
+    }
+
+    try {
+      setActionPlanLoading(true);
+      
+      // API 호출
+      const response = await analyticsService.generateActionPlans(
+        currentFeedbackId,
+        {
+          actionPlanSelect: selectedImprovements
+        }
+      );
+
+      console.log('실행계획 생성 응답:', response);
+      
+      // 성공 메시지 표시
+      alert('실행계획이 성공적으로 생성되었습니다.');
+      
+      // 선택된 항목 초기화
+      setSelectedImprovements([]);
+      
+    } catch (error) {
+      console.error('실행계획 생성 실패:', error);
+      console.error('에러 상세:', error.response?.data);
+      alert(`실행계획 생성에 실패했습니다: ${error.response?.data?.message || '다시 시도해주세요.'}`);
+    } finally {
+      setActionPlanLoading(false);
     }
   };
 
@@ -211,7 +276,7 @@ const AIFeedbackDetail = () => {
           </Card>
         )}
 
-        {/* 개선 사항 */}
+        {/* 개선 사항 - 체크박스 추가 */}
         {aiFeedback?.improvementPoints && aiFeedback.improvementPoints.length > 0 && (
           <Card sx={{ mb: 3 }}>
             <CardContent>
@@ -221,16 +286,65 @@ const AIFeedbackDetail = () => {
                   개선 사항
                 </Typography>
               </Box>
-              <List dense>
+              
+              {/* 개선사항 목록 - 체크박스와 함께 */}
+              <Box sx={{ mb: 2 }}>
                 {aiFeedback.improvementPoints.map((point, index) => (
-                  <ListItem key={index} sx={{ px: 0 }}>
-                    <ListItemText 
-                      primary={`• ${point}`}
-                      sx={{ '& .MuiListItemText-primary': { color: '#f44336' } }}
-                    />
-                  </ListItem>
+                  <FormControlLabel
+                    key={index}
+                    control={
+                      <Checkbox
+                        checked={selectedImprovements.includes(point)}
+                        onChange={(e) => handleImprovementChange(point, e.target.checked)}
+                        color="primary"
+                      />
+                    }
+                    label={point}
+                    sx={{ 
+                      display: 'block',
+                      mb: 1,
+                      '& .MuiFormControlLabel-label': { 
+                        color: '#f44336',
+                        fontSize: '0.9rem' 
+                      }
+                    }}
+                  />
                 ))}
-              </List>
+              </Box>
+
+              {/* 실행계획 생성 버튼 */}
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<PlayArrow />}
+                onClick={handleGenerateActionPlan}
+                disabled={
+                  selectedImprovements.length === 0 || 
+                  actionPlanLoading ||
+                  (!feedbackId && !aiFeedback?.id && !aiFeedback?.feedbackId) // feedbackId가 없으면 비활성화
+                }
+                fullWidth
+                sx={{ mt: 2 }}
+              >
+                {actionPlanLoading ? (
+                  <CircularProgress size={20} color="inherit" />
+                ) : (
+                  '실행계획 생성'
+                )}
+              </Button>
+              
+              {selectedImprovements.length > 0 && (
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1, textAlign: 'center' }}>
+                  {selectedImprovements.length}개 항목이 선택됨
+                </Typography>
+              )}
+
+              {/* 디버깅 정보 (개발 중에만 표시) */}
+              {process.env.NODE_ENV === 'development' && (
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, textAlign: 'center', display: 'block' }}>
+                  Debug: feedbackId={feedbackId}, aiFeedback.id={aiFeedback?.id}
+                </Typography>
+              )}
             </CardContent>
           </Card>
         )}

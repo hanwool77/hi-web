@@ -64,5 +64,11 @@ export const analyticsService = {
   getActionPlanDetail: async (planId) => {
     const response = await analyticsApi.get(`/api/action-plans/${planId}`);
     return response.data;
+  },
+
+  // AI 피드백 기반 실행계획 생성 (새로 추가)
+  generateActionPlans: async (feedbackId, request) => {
+    const response = await analyticsApi.post(`/api/analytics/ai-feedback/${feedbackId}/action-plans`, request);
+    return response.data;
   }
 };
