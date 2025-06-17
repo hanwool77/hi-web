@@ -27,12 +27,30 @@ export const reviewService = {
     return response.data;
   },
 
-  // 매장 리뷰 목록
+  // 매장 리뷰 목록 (수정됨)
   getStoreReviews: async (storeId, page = 0, size = 20) => {
-    const response = await reviewApi.get(`/api/reviews/stores/${storeId}`, {
-      params: { page, size }
-    });
-    return response.data;
+    try {
+      const response = await reviewApi.get(`/api/reviews/stores/${storeId}`, {
+        params: { page, size }
+      });
+      
+      console.log('API 응답 원본:', response);
+      
+      // API 설계서에 따르면 직접 List<ReviewListResponse>를 반환하므로
+      // response.data가 배열이어야 함
+      return response.data;
+      
+    } catch (error) {
+      console.error('매장 리뷰 조회 실패:', error);
+      
+      // 에러 발생 시 빈 배열 반환
+      if (error.response && error.response.status === 404) {
+        console.warn('해당 매장의 리뷰가 없습니다.');
+        return [];
+      }
+      
+      throw error;
+    }
   },
 
   // 리뷰 상세 조회
@@ -72,6 +90,14 @@ export const reviewService = {
   // 리뷰 댓글 작성 조건 확인
   checkCommentCondition: async (reviewId) => {
     const response = await reviewApi.get(`/api/reviews/${reviewId}/comments/write-condition`);
+    return response.data;
+  },
+
+  // 리뷰 댓글 작성 (답글 작성)
+  replyToReview: async (reviewId, content) => {
+    const response = await reviewApi.post(`/api/reviews/${reviewId}/comments`, {
+      content
+    });
     return response.data;
   },
 

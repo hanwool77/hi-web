@@ -1,4 +1,3 @@
-//* src/pages/owner/ReviewManagement.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -43,10 +42,39 @@ const ReviewManagement = () => {
   const loadReviews = async () => {
     try {
       setLoading(true);
+      console.log('리뷰 로딩 시작:', selectedStoreId);
+      
       const response = await reviewService.getStoreReviews(selectedStoreId);
-      setReviews(response.data || []);
+      console.log('리뷰 API 응답:', response);
+      
+      // API 응답 구조 확인 및 처리
+      let reviewData = [];
+      
+      if (response && Array.isArray(response)) {
+        // 직접 배열이 반환된 경우
+        reviewData = response;
+      } else if (response && response.data && Array.isArray(response.data)) {
+        // data 프로퍼티 안에 배열이 있는 경우
+        reviewData = response.data;
+      } else if (response && response.success && Array.isArray(response.data)) {
+        // success 래퍼가 있는 경우
+        reviewData = response.data;
+      } else {
+        console.warn('예상하지 못한 응답 구조:', response);
+        reviewData = [];
+      }
+      
+      console.log('처리된 리뷰 데이터:', reviewData);
+      setReviews(reviewData);
+      
     } catch (error) {
       console.error('리뷰 목록 로드 실패:', error);
+      
+      // 에러 상세 정보 로깅
+      if (error.response) {
+        console.error('API 응답 에러:', error.response.status, error.response.data);
+      }
+      
       setReviews([]);
     } finally {
       setLoading(false);
@@ -84,7 +112,13 @@ const ReviewManagement = () => {
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('ko-KR');
+    if (!dateString) return '날짜 정보 없음';
+    try {
+      return new Date(dateString).toLocaleDateString('ko-KR');
+    } catch (error) {
+      console.error('날짜 포맷 오류:', error);
+      return '날짜 오류';
+    }
   };
 
   if (loading) {
@@ -99,6 +133,7 @@ const ReviewManagement = () => {
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
           <CircularProgress />
         </Box>
+        <Navigation />
       </Box>
     );
   }
@@ -156,7 +191,7 @@ const ReviewManagement = () => {
                   </Box>
                   <Box sx={{ textAlign: 'center' }}>
                     <Typography variant="h4" color="warning.main">
-                      {(reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length || 0).toFixed(1)}
+                      {reviews.length > 0 ? (reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length).toFixed(1) : '0.0'}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       평균 평점
@@ -164,10 +199,10 @@ const ReviewManagement = () => {
                   </Box>
                   <Box sx={{ textAlign: 'center' }}>
                     <Typography variant="h4" color="success.main">
-                      {reviews.filter(r => r.ownerReply).length}
+                      {reviews.filter(r => (r.rating || 0) >= 4).length}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      답변 완료
+                      긍정 리뷰
                     </Typography>
                   </Box>
                 </Box>
@@ -175,41 +210,51 @@ const ReviewManagement = () => {
             </Card>
 
             {/* 리뷰 목록 */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Box>
               {reviews.map((review) => (
-                <Card key={review.id}>
+                <Card key={review.reviewId || review.id} sx={{ mb: 2 }}>
                   <CardContent>
-                    {/* 리뷰 헤더 */}
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Avatar sx={{ width: 32, height: 32 }}>
-                          <Person />
-                        </Avatar>
-                        <Box>
-                          <Typography variant="subtitle2">
-                            {review.customerName || '익명'}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {formatDate(review.createdAt)}
-                          </Typography>
-                        </Box>
+                    {/* 작성자 정보 */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                      <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
+                        <Person />
+                      </Avatar>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="subtitle2">
+                          {review.authorName || '익명'}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {formatDate(review.createdAt)}
+                        </Typography>
                       </Box>
                       <Chip 
-                        label={getReviewTypeText(review.rating)}
-                        color={getReviewTypeColor(review.rating)}
+                        label={getReviewTypeText(review.rating || 0)}
+                        color={getReviewTypeColor(review.rating || 0)}
                         size="small"
                       />
                     </Box>
 
                     {/* 평점 */}
                     <Box sx={{ mb: 2 }}>
-                      <Rating value={review.rating} readOnly size="small" />
+                      <Rating value={review.rating || 0} readOnly size="small" />
                     </Box>
 
                     {/* 리뷰 내용 */}
                     <Typography variant="body2" sx={{ mb: 2 }}>
-                      {review.content}
+                      {review.content || '리뷰 내용이 없습니다.'}
                     </Typography>
+
+                    {/* 플랫폼 정보 */}
+                    {review.platform && (
+                      <Box sx={{ mb: 2 }}>
+                        <Chip 
+                          label={review.platform} 
+                          size="small" 
+                          variant="outlined"
+                          sx={{ fontSize: '0.7rem' }}
+                        />
+                      </Box>
+                    )}
 
                     {/* 사장님 답글 */}
                     {review.ownerReply && (
@@ -261,9 +306,9 @@ const ReviewManagement = () => {
           <DialogContent>
             {replyDialog.review && (
               <Box sx={{ mb: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-                <Rating value={replyDialog.review.rating} readOnly size="small" />
+                <Rating value={replyDialog.review.rating || 0} readOnly size="small" />
                 <Typography variant="body2" sx={{ mt: 1 }}>
-                  {replyDialog.review.content}
+                  {replyDialog.review.content || '리뷰 내용이 없습니다.'}
                 </Typography>
               </Box>
             )}
