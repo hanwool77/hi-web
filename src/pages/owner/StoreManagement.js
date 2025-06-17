@@ -1,4 +1,4 @@
-//* src/pages/owner/StoreManagement.js - 이미지 처리 수정
+//* src/pages/owner/StoreManagement.js - 이미지 처리 수정 및 메뉴 경로 수정
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -162,13 +162,13 @@ const StoreManagement = () => {
       icon: <MenuBook />,
       title: '메뉴 관리',
       description: '메뉴 등록, 수정, 삭제',
-      action: () => navigate('/owner/menu')
+      action: () => navigate('/owner/menu-management') // 수정된 부분
     },
     {
       icon: <RateReview />,
       title: '리뷰 관리',
       description: '고객 리뷰 확인 및 답글',
-      action: () => navigate('/owner/reviews')
+      action: () => navigate('/owner/review-management') // 수정된 부분
     },
     {
       icon: <Assessment />,
@@ -180,13 +180,13 @@ const StoreManagement = () => {
       icon: <Link />,
       title: '외부 플랫폼 연동',
       description: '네이버, 카카오, 구글 연동 관리',
-      action: () => navigate('/owner/external')
+      action: () => navigate('/owner/external-integration') // 수정된 부분
     },
     {
       icon: <Settings />,
       title: '매장 정보 관리',
       description: '기본 정보, 운영시간 등',
-      action: () => navigate(`/owner/store/${selectedStoreId}/info`)
+      action: () => navigate('/owner/store-info') // 수정된 부분
     }
   ];
 

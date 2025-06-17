@@ -8,8 +8,8 @@ const OwnerNavigation = () => {
   const location = useLocation();
   
   const getValue = () => {
-    if (location.pathname === '/owner' || location.pathname.includes('/owner/stores')) return 0;
-    if (location.pathname.includes('/owner/analytics') || location.pathname.includes('/owner/management')) return 1;
+    if (location.pathname === '/owner' || location.pathname.includes('/owner/analytics')) return 0;
+    if (location.pathname.includes('/owner/store-management') || location.pathname.includes('/owner/management')) return 1; // 수정된 부분
     if (location.pathname.includes('/owner/mypage')) return 2;
     return 0;
   };
@@ -37,7 +37,7 @@ const OwnerNavigation = () => {
               navigate('/owner');
               break;
             case 1:
-              navigate('/owner/stores');
+              navigate('/owner/store-management'); // 수정된 부분
               break;
             case 2:
               navigate('/owner/mypage');

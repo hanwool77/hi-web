@@ -20,7 +20,7 @@ const Navigation = () => {
     } else if (user?.role === 'OWNER') {
       return [
         { label: '분석', icon: <Assessment />, path: '/owner' },
-        { label: '매장관리', icon: <Store />, path: '/owner/management' },
+        { label: '매장관리', icon: <Store />, path: '/owner/store-management' }, // 수정된 부분
         { label: '마이페이지', icon: <Person />, path: '/owner/mypage' }
       ];
     }
