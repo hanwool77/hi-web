@@ -59,7 +59,7 @@ const StoreInfo = () => {
       const response = await storeApi.get(`/api/stores/${selectedStoreId}`);
       const data = response.data.data || {};
       setStoreInfo({
-        name: data.name || '',
+        name: data.storeName || '',
         description: data.description || '',
         address: data.address || '',
         phone: data.phone || '',
