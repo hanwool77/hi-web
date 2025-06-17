@@ -1,8 +1,9 @@
+//* src/pages/owner/StoresList.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box, Typography, Card, CardContent, Button, Grid,
-  Avatar, Chip, IconButton
+  Avatar, Chip, IconButton, CircularProgress
 } from '@mui/material';
 import { ArrowBack, Add, Analytics, Settings, Delete } from '@mui/icons-material';
 import { storeService } from '../../services/storeService';
@@ -21,6 +22,7 @@ const StoresList = () => {
     try {
       setLoading(true);
       const response = await storeService.getOwnerStores();
+      console.log('매장 목록 응답:', response);
       setStores(response.data || []);
     } catch (error) {
       console.error('매장 목록 로드 실패:', error);
@@ -31,14 +33,30 @@ const StoresList = () => {
   };
 
   const handleDeleteStore = async (storeId) => {
-    if (window.confirm('정말로 매장을 삭제하시겠습니까?')) {
+    if (window.confirm('정말로 매장을 삭제하시겠습니까?\n삭제된 매장은 복구할 수 없습니다.')) {
       try {
+        console.log('삭제 요청 storeId:', storeId);
+        
         await storeService.deleteStore(storeId);
-        setStores(stores.filter(store => store.id !== storeId));
+        
+        // 성공 시 목록에서 제거
+        setStores(currentStores => 
+          currentStores.filter(storeItem => {
+            const currentStoreId = storeItem.storeId || storeItem.id;
+            return currentStoreId !== storeId;
+          })
+        );
+        
         alert('매장이 삭제되었습니다.');
+        
       } catch (error) {
         console.error('매장 삭제 실패:', error);
-        alert('매장 삭제에 실패했습니다.');
+        console.error('에러 상세:', error.response?.data);
+        
+        const errorMessage = error.response?.data?.message || 
+                            error.message || 
+                            '매장 삭제에 실패했습니다.';
+        alert(errorMessage);
       }
     }
   };
@@ -62,9 +80,11 @@ const StoresList = () => {
         </Button>
       </Box>
 
-      <Box className="content-area">
+      <Box className="content-area" sx={{ p: 2, pb: 10 }}>
         {loading ? (
-          <Typography>로딩 중...</Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+            <CircularProgress />
+          </Box>
         ) : stores.length === 0 ? (
           <Card sx={{ textAlign: 'center', p: 3 }}>
             <Typography color="text.secondary" sx={{ mb: 2 }}>
@@ -80,34 +100,34 @@ const StoresList = () => {
           </Card>
         ) : (
           <Grid container spacing={2}>
-            {stores.map((store) => (
-              <Grid item xs={12} key={store.id}>
+            {stores.map((storeItem) => (
+              <Grid item xs={12} key={storeItem.storeId || storeItem.id}>
                 <Card>
                   <CardContent>
                     <Box sx={{ display: 'flex', gap: 2 }}>
                       <Avatar
-                        src={store.image || '/images/store-default.jpg'}
+                        src={storeItem.image || '/images/store-default.jpg'}
                         sx={{ width: 60, height: 60 }}
                       />
                       <Box sx={{ flex: 1 }}>
                         <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                          {store.name}
+                          {storeItem.storeName || storeItem.name}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          {store.category} • {store.address}
+                          {storeItem.category} • {storeItem.address}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          📞 {store.phone}
+                          📞 {storeItem.phone}
                         </Typography>
                         <Chip 
-                          label={store.status === 'ACTIVE' ? '운영중' : '휴업'} 
-                          color={store.status === 'ACTIVE' ? 'success' : 'default'}
+                          label={storeItem.status === 'ACTIVE' ? '운영중' : '휴업'} 
+                          color={storeItem.status === 'ACTIVE' ? 'success' : 'default'}
                           size="small"
                           sx={{ mt: 1 }}
                         />
                       </Box>
                       <IconButton
-                        onClick={() => handleDeleteStore(store.id)}
+                        onClick={() => handleDeleteStore(storeItem.storeId || storeItem.id)}
                         color="error"
                         size="small"
                       >
@@ -118,14 +138,14 @@ const StoresList = () => {
                       <Button
                         size="small"
                         startIcon={<Analytics />}
-                        onClick={() => navigate(`/owner/analytics/${store.storeId || store.id}`)}
+                        onClick={() => navigate(`/owner/analytics/${storeItem.storeId || storeItem.id}`)}
                       >
                         분석
                       </Button>
                       <Button
                         size="small"
                         startIcon={<Settings />}
-                        onClick={() => navigate(`/owner/store-management/${store.storeId || store.id}`)}
+                        onClick={() => navigate(`/owner/store-management/${storeItem.storeId || storeItem.id}`)}
                       >
                         관리
                       </Button>
