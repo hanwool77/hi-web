@@ -44,12 +44,25 @@ const AIFeedbackDetail = () => {
   const [error, setError] = useState(null);
   const [selectedImprovements, setSelectedImprovements] = useState([]); // 선택된 개선사항들
   const [actionPlanLoading, setActionPlanLoading] = useState(false); // 실행계획 생성 로딩 상태
+  const [disabledImprovements, setDisabledImprovements] = useState([]); // 비활성화할 개선사항들
 
   useEffect(() => {
     if (selectedStoreId) {
       loadAIFeedbackData();
     }
   }, [selectedStoreId]);
+
+  // existActionPlan과 improvementPoints의 겹치는 부분을 확인하는 함수
+  const checkOverlappingImprovements = (improvementPoints, existActionPlan) => {
+    if (!improvementPoints || !existActionPlan) return [];
+    
+    return improvementPoints.filter(improvement => 
+      existActionPlan.some(actionPlan => 
+        actionPlan.trim().toLowerCase().includes(improvement.trim().toLowerCase()) ||
+        improvement.trim().toLowerCase().includes(actionPlan.trim().toLowerCase())
+      )
+    );
+  };
 
   const loadAIFeedbackData = async () => {
     try {
@@ -67,8 +80,24 @@ const AIFeedbackDetail = () => {
       console.log('AI Feedback Detail Response:', feedbackRes);
       console.log('Review Analysis Response:', analysisRes);
       
-      setAiFeedback(feedbackRes.data);
+      const feedbackData = feedbackRes.data;
+      setAiFeedback(feedbackData);
       setReviewAnalysis(analysisRes.data);
+      
+      // existActionPlan과 improvementPoints의 겹치는 부분 확인
+      if (feedbackData.improvementPoints && feedbackData.existActionPlan) {
+        const overlapping = checkOverlappingImprovements(
+          feedbackData.improvementPoints, 
+          feedbackData.existActionPlan
+        );
+        
+        console.log('겹치는 개선사항들:', overlapping);
+        
+        // 겹치는 항목들을 미리 선택된 상태로 설정
+        setSelectedImprovements(overlapping);
+        // 겹치는 항목들을 비활성화 목록에 추가
+        setDisabledImprovements(overlapping);
+      }
       
     } catch (error) {
       console.error('AI 피드백 데이터 로드 실패:', error);
@@ -80,6 +109,11 @@ const AIFeedbackDetail = () => {
 
   // 개선사항 체크박스 변경 핸들러
   const handleImprovementChange = (improvement, checked) => {
+    // 이미 실행계획이 있는 항목은 변경할 수 없음
+    if (disabledImprovements.includes(improvement)) {
+      return;
+    }
+    
     setSelectedImprovements(prev => {
       if (checked) {
         return [...prev, improvement];
@@ -91,8 +125,13 @@ const AIFeedbackDetail = () => {
 
   // 실행계획 생성 API 호출
   const handleGenerateActionPlan = async () => {
-    if (selectedImprovements.length === 0) {
-      alert('개선사항을 선택해주세요.');
+    // 비활성화된 항목을 제외한 선택된 항목들만 필터링
+    const availableSelections = selectedImprovements.filter(
+      improvement => !disabledImprovements.includes(improvement)
+    );
+    
+    if (availableSelections.length === 0) {
+      alert('새로운 개선사항을 선택해주세요.');
       return;
     }
 
@@ -111,11 +150,11 @@ const AIFeedbackDetail = () => {
     try {
       setActionPlanLoading(true);
       
-      // API 호출
+      // API 호출 - 비활성화된 항목 제외
       const response = await analyticsService.generateActionPlans(
         currentFeedbackId,
         {
-          actionPlanSelect: selectedImprovements
+          actionPlanSelect: availableSelections
         }
       );
 
@@ -124,8 +163,8 @@ const AIFeedbackDetail = () => {
       // 성공 메시지 표시
       alert('실행계획이 성공적으로 생성되었습니다.');
       
-      // 선택된 항목 초기화
-      setSelectedImprovements([]);
+      // 새로 선택된 항목들을 비활성화 목록에 추가
+      setDisabledImprovements(prev => [...prev, ...availableSelections]);
       
     } catch (error) {
       console.error('실행계획 생성 실패:', error);
@@ -193,34 +232,31 @@ const AIFeedbackDetail = () => {
     <Box className="mobile-container">
       {/* 헤더 */}
       <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
         p: 2, 
-        bgcolor: '#9c27b0', 
-        color: 'white',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 1
+        borderBottom: '1px solid #e0e0e0',
+        backgroundColor: '#fff',
+        position: 'sticky',
+        top: 0,
+        zIndex: 1000
       }}>
         <ArrowBack 
-          onClick={() => navigate('/owner/analytics/' + selectedStoreId)}
-          sx={{ cursor: 'pointer' }}
+          onClick={() => navigate('/owner/ai-feedback')} 
+          sx={{ fontSize: 24, cursor: 'pointer', mr: 2 }}
         />
-        <Box>
-          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-            AI 피드백 상세
-          </Typography>
-          <Typography variant="body2">
-            인공지능 분석 결과
-          </Typography>
-        </Box>
+        <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+          AI 피드백 상세
+        </Typography>
       </Box>
-      
-      <Box className="content-area" sx={{ p: 2 }}>
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
 
+      {error && (
+        <Alert severity="error" sx={{ m: 2 }}>
+          {error}
+        </Alert>
+      )}
+
+      <Box sx={{ p: 2 }}>
         {/* AI 분석 요약 */}
         {aiFeedback && (
           <Card sx={{ mb: 3 }}>
@@ -230,24 +266,19 @@ const AIFeedbackDetail = () => {
                 <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
                   AI 분석 요약
                 </Typography>
+                <Chip 
+                  label={`신뢰도 ${(aiFeedback.confidenceScore * 100).toFixed(0)}%`}
+                  color={getConfidenceColor(aiFeedback.confidenceScore * 100)}
+                  size="small"
+                  sx={{ ml: 'auto' }}
+                />
               </Box>
-              
               <Typography variant="body1" sx={{ mb: 2, lineHeight: 1.6 }}>
-                {aiFeedback.summary || '분석 중입니다...'}
+                {aiFeedback.summary}
               </Typography>
-              
-              {aiFeedback.confidenceScore && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    신뢰도:
-                  </Typography>
-                  <Chip 
-                    label={`${aiFeedback.confidenceScore}%`}
-                    color={getConfidenceColor(aiFeedback.confidenceScore)}
-                    size="small"
-                  />
-                </Box>
-              )}
+              <Typography variant="body2" color="text.secondary">
+                감정 분석: {aiFeedback.sentimentAnalysis}
+              </Typography>
             </CardContent>
           </Card>
         )}
@@ -259,14 +290,14 @@ const AIFeedbackDetail = () => {
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <TrendingUp sx={{ fontSize: 24, color: '#4caf50', mr: 1 }} />
                 <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                  긍정적 요소
+                  강점 분석
                 </Typography>
               </Box>
               <List dense>
                 {aiFeedback.positivePoints.map((point, index) => (
                   <ListItem key={index} sx={{ px: 0 }}>
                     <ListItemText 
-                      primary={`• ${point}`}
+                      primary={`✓ ${point}`}
                       sx={{ '& .MuiListItemText-primary': { color: '#4caf50' } }}
                     />
                   </ListItem>
@@ -276,7 +307,7 @@ const AIFeedbackDetail = () => {
           </Card>
         )}
 
-        {/* 개선 사항 - 체크박스 추가 */}
+        {/* 개선 사항 */}
         {aiFeedback?.improvementPoints && aiFeedback.improvementPoints.length > 0 && (
           <Card sx={{ mb: 3 }}>
             <CardContent>
@@ -289,27 +320,49 @@ const AIFeedbackDetail = () => {
               
               {/* 개선사항 목록 - 체크박스와 함께 */}
               <Box sx={{ mb: 2 }}>
-                {aiFeedback.improvementPoints.map((point, index) => (
-                  <FormControlLabel
-                    key={index}
-                    control={
-                      <Checkbox
-                        checked={selectedImprovements.includes(point)}
-                        onChange={(e) => handleImprovementChange(point, e.target.checked)}
-                        color="primary"
-                      />
-                    }
-                    label={point}
-                    sx={{ 
-                      display: 'block',
-                      mb: 1,
-                      '& .MuiFormControlLabel-label': { 
-                        color: '#f44336',
-                        fontSize: '0.9rem' 
+                {aiFeedback.improvementPoints.map((point, index) => {
+                  const isDisabled = disabledImprovements.includes(point);
+                  
+                  return (
+                    <FormControlLabel
+                      key={index}
+                      control={
+                        <Checkbox
+                          checked={selectedImprovements.includes(point)}
+                          onChange={(e) => handleImprovementChange(point, e.target.checked)}
+                          disabled={isDisabled}
+                          color="primary"
+                        />
                       }
-                    }}
-                  />
-                ))}
+                      label={
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              color: isDisabled ? '#999' : '#f44336',
+                              textDecoration: isDisabled ? 'line-through' : 'none'
+                            }}
+                          >
+                            {point}
+                          </Typography>
+                          {isDisabled && (
+                            <Chip 
+                              label="실행계획 있음" 
+                              size="small" 
+                              color="success" 
+                              sx={{ ml: 1, fontSize: '0.7rem', height: '20px' }}
+                            />
+                          )}
+                        </Box>
+                      }
+                      sx={{ 
+                        display: 'block',
+                        mb: 1,
+                        opacity: isDisabled ? 0.6 : 1
+                      }}
+                    />
+                  );
+                })}
               </Box>
 
               {/* 실행계획 생성 버튼 */}
@@ -319,7 +372,7 @@ const AIFeedbackDetail = () => {
                 startIcon={<PlayArrow />}
                 onClick={handleGenerateActionPlan}
                 disabled={
-                  selectedImprovements.length === 0 || 
+                  selectedImprovements.filter(item => !disabledImprovements.includes(item)).length === 0 || 
                   actionPlanLoading ||
                   (!feedbackId && !aiFeedback?.id && !aiFeedback?.feedbackId) // feedbackId가 없으면 비활성화
                 }
@@ -333,9 +386,16 @@ const AIFeedbackDetail = () => {
                 )}
               </Button>
               
-              {selectedImprovements.length > 0 && (
+              {selectedImprovements.filter(item => !disabledImprovements.includes(item)).length > 0 && (
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1, textAlign: 'center' }}>
-                  {selectedImprovements.length}개 항목이 선택됨
+                  {selectedImprovements.filter(item => !disabledImprovements.includes(item)).length}개 새로운 항목이 선택됨
+                </Typography>
+              )}
+
+              {/* 기존 실행계획 정보 표시 */}
+              {disabledImprovements.length > 0 && (
+                <Typography variant="body2" color="success.main" sx={{ mt: 1, textAlign: 'center' }}>
+                  {disabledImprovements.length}개 항목은 이미 실행계획이 있습니다
                 </Typography>
               )}
 
@@ -391,7 +451,7 @@ const AIFeedbackDetail = () => {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ name, percent, value }) => `${name}: ${value}개 (${(percent * 100).toFixed(0)}%)`}
+                      label={({ name, percent, value }) => `${name}: ${value}(${(percent * 100).toFixed(1)}%)`}
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="value"
@@ -400,7 +460,7 @@ const AIFeedbackDetail = () => {
                         <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value) => [`${formatNumber(value)}개`, '리뷰 수']} />
+                    <Tooltip />
                   </PieChart>
                 </ResponsiveContainer>
               </Box>
@@ -408,24 +468,26 @@ const AIFeedbackDetail = () => {
           </Card>
         )}
 
-        {/* 주요 키워드 분석 */}
+        {/* 키워드 분석 차트 */}
         {getKeywordChartData().length > 0 && (
           <Card sx={{ mb: 3 }}>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Assessment sx={{ fontSize: 24, color: '#673ab7', mr: 1 }} />
-                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                  주요 키워드 분석
-                </Typography>
-              </Box>
-              <Box sx={{ height: 250 }}>
+              <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
+                주요 키워드 분석
+              </Typography>
+              <Box sx={{ height: 300 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={getKeywordChartData()} layout="horizontal">
+                  <BarChart data={getKeywordChartData()}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" />
-                    <YAxis dataKey="keyword" type="category" width={60} />
-                    <Tooltip formatter={(value) => [`${formatNumber(value)}회`, '언급 횟수']} />
-                    <Bar dataKey="count" fill="#673ab7" />
+                    <XAxis 
+                      dataKey="keyword" 
+                      angle={-45}
+                      textAnchor="end"
+                      height={80}
+                    />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="count" fill="#8884d8" />
                   </BarChart>
                 </ResponsiveContainer>
               </Box>
@@ -433,13 +495,47 @@ const AIFeedbackDetail = () => {
           </Card>
         )}
 
-        {/* 분석 생성 시간 */}
-        {aiFeedback?.generatedAt && (
-          <Box sx={{ textAlign: 'center', color: 'text.secondary', mb: 2 }}>
-            <Typography variant="body2">
-              분석 생성 시간: {new Date(aiFeedback.generatedAt).toLocaleString('ko-KR')}
-            </Typography>
-          </Box>
+        {/* 리뷰 통계 요약 */}
+        {reviewAnalysis && (
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
+                리뷰 분석 요약
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <Typography variant="body2" color="text.secondary">총 리뷰 수</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                    {formatNumber(reviewAnalysis.totalReviews)}
+                  </Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="body2" color="text.secondary">평균 평점</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                    {reviewAnalysis.averageRating ? reviewAnalysis.averageRating.toFixed(1) : '0.0'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={4}>
+                  <Typography variant="body2" color="text.secondary">긍정</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#4caf50' }}>
+                    {formatNumber(reviewAnalysis.positiveCount)}
+                  </Typography>
+                </Grid>
+                <Grid item xs={4}>
+                  <Typography variant="body2" color="text.secondary">중립</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#ff9800' }}>
+                    {formatNumber(reviewAnalysis.neutralCount)}
+                  </Typography>
+                </Grid>
+                <Grid item xs={4}>
+                  <Typography variant="body2" color="text.secondary">부정</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#f44336' }}>
+                    {formatNumber(reviewAnalysis.negativeCount)}
+                  </Typography>
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
         )}
       </Box>
       
