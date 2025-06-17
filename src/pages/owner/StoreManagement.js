@@ -1,4 +1,4 @@
-//* src/pages/owner/StoreManagement.js - 이미지 처리 수정 및 메뉴 경로 수정
+//* src/pages/owner/StoreManagement.js - 기존 화면 복원 + OwnerHeader 적용
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -28,11 +28,12 @@ import {
 import { useSelectedStore } from '../../contexts/SelectedStoreContext';
 import { storeService } from '../../services/storeService';
 import { analyticsService } from '../../services/analyticsService';
+import OwnerHeader from '../../components/common/OwnerHeader';
 import OwnerNavigation from '../../components/common/Navigation';
 
 const StoreManagement = () => {
   const navigate = useNavigate();
-  const { selectedStoreId } = useSelectedStore();
+  const { selectedStoreId, selectedStore } = useSelectedStore();
   const [store, setStore] = useState(null);
   const [loading, setLoading] = useState(true);
   const [aiAnalysisLoading, setAiAnalysisLoading] = useState(false);
@@ -42,6 +43,8 @@ const StoreManagement = () => {
   useEffect(() => {
     if (selectedStoreId) {
       loadStoreInfo();
+    } else {
+      setLoading(false);
     }
   }, [selectedStoreId]);
 
@@ -104,249 +107,230 @@ const StoreManagement = () => {
     }
   };
 
-  // 이미지 에러 핸들러
+  // 이미지 로드 에러 핸들러
   const handleImageError = () => {
-    console.log('이미지 로드 실패');
     setImageError(true);
   };
 
-  // 이미지가 있는지 확인하는 함수
-  const hasValidImage = () => {
-    const imageUrl = store?.imageUrl || store?.image;
-    return imageUrl && !imageError && imageUrl.trim() !== '';
+  // 메뉴 클릭 핸들러들
+  const handleMenuClick = (path) => {
+    if (!selectedStoreId) {
+      alert('매장을 선택해주세요.');
+      return;
+    }
+    navigate(path);
   };
 
   if (loading) {
     return (
       <Box className="mobile-container">
+        <OwnerHeader 
+          title="매장 관리"
+          subtitle="매장 정보 로딩 중..."
+          showStoreSelector={true}
+        />
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
           <CircularProgress />
-          <Typography sx={{ ml: 2 }}>매장 정보를 불러오는 중...</Typography>
         </Box>
         <OwnerNavigation />
       </Box>
     );
   }
-
-  if (!store) {
-    return (
-      <Box className="mobile-container">
-        <Box sx={{ p: 2, textAlign: 'center' }}>
-          <Typography variant="h6" color="error" sx={{ mb: 2 }}>
-            매장 정보를 찾을 수 없습니다.
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            선택된 매장 ID: {selectedStoreId}
-          </Typography>
-          <Button 
-            variant="contained" 
-            onClick={() => navigate('/owner/stores')}
-            sx={{ mr: 2 }}
-          >
-            매장 선택하기
-          </Button>
-          <Button 
-            variant="outlined" 
-            onClick={loadStoreInfo}
-          >
-            다시 시도
-          </Button>
-        </Box>
-        <OwnerNavigation />
-      </Box>
-    );
-  }
-
-  const menuItems = [
-    {
-      icon: <MenuBook />,
-      title: '메뉴 관리',
-      description: '메뉴 등록, 수정, 삭제',
-      action: () => navigate('/owner/menu-management') // 수정된 부분
-    },
-    {
-      icon: <RateReview />,
-      title: '리뷰 관리',
-      description: '고객 리뷰 확인 및 답글',
-      action: () => navigate('/owner/review-management') // 수정된 부분
-    },
-    {
-      icon: <Assessment />,
-      title: '매장 분석',
-      description: 'AI 피드백 및 통계 분석',
-      action: () => navigate(`/owner/analytics/${selectedStoreId}`)
-    },
-    {
-      icon: <Link />,
-      title: '외부 플랫폼 연동',
-      description: '네이버, 카카오, 구글 연동 관리',
-      action: () => navigate('/owner/external-integration') // 수정된 부분
-    },
-    {
-      icon: <Settings />,
-      title: '매장 정보 관리',
-      description: '기본 정보, 운영시간 등',
-      action: () => navigate('/owner/store-info') // 수정된 부분
-    }
-  ];
 
   return (
     <Box className="mobile-container">
-      {/* 헤더 */}
-      <Box sx={{ p: 2, bgcolor: '#2c3e50', color: 'white' }}>
-        <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-          매장 관리
-        </Typography>
-        <Typography variant="body2">
-          {store.storeName || store.name || '매장명 없음'}
-        </Typography>
-      </Box>
+      <OwnerHeader 
+        title="매장 관리"
+        subtitle={selectedStore ? `${selectedStore.name} 관리` : '매장을 선택해주세요'}
+        showStoreSelector={true}
+      />
       
       <Box className="content-area">
-        {/* 매장 정보 카드 */}
-        <Card sx={{ mb: 3 }}>
-          {/* 이미지 영역 - 조건부 렌더링 */}
-          {hasValidImage() ? (
-            <Box
-              component="img"
-              sx={{ width: '100%', height: 150, objectFit: 'cover' }}
-              src={store.imageUrl || store.image}
-              alt={store.storeName || store.name}
-              onError={handleImageError}
-            />
-          ) : (
-            // 이미지가 없거나 로드 실패 시 빈 공간 또는 아이콘
-            <Box
-              sx={{ 
-                width: '100%', 
-                height: 150, 
-                bgcolor: '#f5f5f5',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#999'
-              }}
-            >
-              <StoreIcon sx={{ fontSize: 48 }} />
-            </Box>
-          )}
-          
-          <CardContent>
-            <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>
-              {store.storeName || store.name}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              📍 {store.address || store.location || '주소 정보 없음'}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              📞 {store.phone || '전화번호 없음'}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              🕒 {store.operatingHours || '운영시간 미등록'}
-            </Typography>
-            
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#4caf50' }}>
-                  {store.rating || '0.0'}
-                </Typography>
-                <Typography variant="caption">평점</Typography>
-              </Box>
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#2196f3' }}>
-                  {store.reviewCount || 0}
-                </Typography>
-                <Typography variant="caption">리뷰</Typography>
-              </Box>
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#ff9800' }}>
-                  {store.status === 'ACTIVE' || store.status === '운영중' ? '영업중' : '영업종료'}
-                </Typography>
-                <Typography variant="caption">상태</Typography>
-              </Box>
-            </Box>
-          </CardContent>
-        </Card>
-
-        {/* AI 분석 생성 섹션 */}
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Psychology sx={{ fontSize: 32, color: '#9c27b0', mr: 1 }} />
-              <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                AI 분석 관리
+        {!selectedStoreId ? (
+          <Card>
+            <CardContent sx={{ textAlign: 'center', py: 4 }}>
+              <StoreIcon sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
+              <Typography variant="h6" color="text.secondary">
+                관리할 매장을 선택해주세요
               </Typography>
-            </Box>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              최신 리뷰 데이터를 기반으로 AI 피드백과 실행계획을 생성합니다.
-            </Typography>
-            
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                우측 상단에서 매장을 선택할 수 있습니다
+              </Typography>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            {/* AI 분석 결과 표시 */}
             {analysisResult && (
               <Alert severity="success" sx={{ mb: 2 }}>
-                AI 분석이 성공적으로 생성되었습니다! 분석 화면에서 확인해보세요.
+                AI 분석이 완료되었습니다! 분석 결과를 확인해보세요.
               </Alert>
             )}
-            
-            <Button
-              variant="contained"
-              startIcon={<AutoAwesome />}
-              onClick={handleGenerateAIAnalysis}
-              disabled={aiAnalysisLoading}
-              sx={{ 
-                bgcolor: '#9c27b0',
-                '&:hover': { bgcolor: '#7b1fa2' }
-              }}
-              fullWidth
-            >
-              {aiAnalysisLoading ? (
-                <>
-                  <CircularProgress size={20} sx={{ mr: 1, color: 'white' }} />
-                  AI 분석 생성 중...
-                </>
-              ) : (
-                'AI 피드백 생성 요청'
-              )}
-            </Button>
-          </CardContent>
-        </Card>
 
-        {/* 메뉴 목록 */}
-        <Card>
-          <CardContent>
-            <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
-              관리 메뉴
-            </Typography>
-            <List sx={{ p: 0 }}>
-              {menuItems.map((item, index) => (
-                <React.Fragment key={index}>
-                  <ListItem
-                    button
-                    onClick={item.action}
-                    sx={{
-                      borderRadius: 1,
-                      mb: 1,
-                      '&:hover': {
-                        bgcolor: '#f5f5f5'
-                      }
-                    }}
-                  >
-                    <ListItemIcon sx={{ color: '#2c3e50' }}>
-                      {item.icon}
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={item.title}
-                      secondary={item.description}
-                      primaryTypographyProps={{
-                        fontWeight: 'bold'
+            {/* 매장 정보 카드 */}
+            {store && (
+              <Card sx={{ mb: 3 }}>
+                <CardContent>
+                  {/* 매장 이미지 */}
+                  {store.imageUrl && !imageError ? (
+                    <Box
+                      component="img"
+                      sx={{
+                        width: '100%',
+                        height: 150,
+                        objectFit: 'cover',
+                        borderRadius: 1,
+                        mb: 2
                       }}
+                      src={store.imageUrl}
+                      alt={store.name}
+                      onError={handleImageError}
+                    />
+                  ) : (
+                    <Box
+                      sx={{
+                        width: '100%',
+                        height: 150,
+                        bgcolor: 'grey.200',
+                        borderRadius: 1,
+                        mb: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      <StoreIcon sx={{ fontSize: 48, color: 'grey.500' }} />
+                    </Box>
+                  )}
+
+                  <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>
+                    {store.name}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    📍 {store.address}
+                  </Typography>
+                  {store.phone && (
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                      📞 {store.phone}
+                    </Typography>
+                  )}
+                  {store.operatingHours && (
+                    <Typography variant="body2" color="text.secondary">
+                      🕒 {store.operatingHours}
+                    </Typography>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* AI 분석 생성 버튼 */}
+            <Card sx={{ mb: 3 }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <AutoAwesome sx={{ fontSize: 24, color: '#9c27b0', mr: 1 }} />
+                  <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                    AI 분석 요청
+                  </Typography>
+                </Box>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  최근 30일간의 데이터를 바탕으로 AI 분석과 실행계획을 생성합니다.
+                </Typography>
+                <Button 
+                  variant="contained" 
+                  fullWidth
+                  startIcon={<Psychology />}
+                  onClick={handleGenerateAIAnalysis}
+                  disabled={aiAnalysisLoading}
+                >
+                  {aiAnalysisLoading ? 'AI 분석 생성 중...' : 'AI 분석 생성'}
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* 관리 메뉴 */}
+            <Card>
+              <CardContent>
+                <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
+                  매장 관리 메뉴
+                </Typography>
+                <List sx={{ p: 0 }}>
+                  <ListItem 
+                    button 
+                    onClick={() => handleMenuClick(`/owner/analytics/${selectedStoreId}`)}
+                  >
+                    <ListItemIcon>
+                      <Assessment sx={{ color: '#2196f3' }} />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="매장 분석"
+                      secondary="상세 분석 및 통계 확인"
                     />
                   </ListItem>
-                  {index < menuItems.length - 1 && <Divider />}
-                </React.Fragment>
-              ))}
-            </List>
-          </CardContent>
-        </Card>
+                  
+                  <Divider />
+                  
+                  <ListItem 
+                    button 
+                    onClick={() => handleMenuClick('/owner/menu-management')}
+                  >
+                    <ListItemIcon>
+                      <MenuBook sx={{ color: '#4caf50' }} />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="메뉴 관리"
+                      secondary="메뉴 등록, 수정, 삭제"
+                    />
+                  </ListItem>
+                  
+                  <Divider />
+                  
+                  <ListItem 
+                    button 
+                    onClick={() => handleMenuClick('/owner/review-management')}
+                  >
+                    <ListItemIcon>
+                      <RateReview sx={{ color: '#ff9800' }} />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="리뷰 관리"
+                      secondary="고객 리뷰 확인 및 답변"
+                    />
+                  </ListItem>
+                  
+                  <Divider />
+                  
+                  <ListItem 
+                    button 
+                    onClick={() => handleMenuClick('/owner/external-integration')}
+                  >
+                    <ListItemIcon>
+                      <Link sx={{ color: '#9c27b0' }} />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="외부 연동"
+                      secondary="네이버, 카카오, 구글 연동"
+                    />
+                  </ListItem>
+                  
+                  <Divider />
+                  
+                  <ListItem 
+                    button 
+                    onClick={() => handleMenuClick('/owner/store-info')}
+                  >
+                    <ListItemIcon>
+                      <Settings sx={{ color: '#607d8b' }} />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="매장 정보 수정"
+                      secondary="기본 정보 및 설정 변경"
+                    />
+                  </ListItem>
+                </List>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </Box>
       
       <OwnerNavigation />

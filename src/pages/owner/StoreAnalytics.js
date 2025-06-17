@@ -1,81 +1,107 @@
 //* src/pages/owner/StoreAnalytics.js
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { 
   Box, 
   Typography, 
   Card, 
   CardContent, 
   Grid,
-  CircularProgress,
+  Button,
+  LinearProgress,
   Divider,
+  CircularProgress,
   Chip,
   Alert
 } from '@mui/material';
 import { 
-  ArrowBack, 
-  TrendingUp, 
-  Assessment,
-  Psychology,
+  Psychology, 
   Assignment,
   ShoppingCart,
-  Star
+  Star,
+  TrendingUp,
+  Assessment
 } from '@mui/icons-material';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { analyticsService } from '../../services/analyticsService';
 import { useSelectedStore } from '../../contexts/SelectedStoreContext';
+import { analyticsService } from '../../services/analyticsService';
+import OwnerHeader from '../../components/common/OwnerHeader';
 import OwnerNavigation from '../../components/common/Navigation';
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
 const StoreAnalytics = () => {
   const navigate = useNavigate();
-  const { selectedStoreId } = useSelectedStore();
-  const [analytics, setAnalytics] = useState(null);
+  const { storeId } = useParams();
+  const { selectedStoreId, selectedStore, selectStore } = useSelectedStore();
   const [statistics, setStatistics] = useState(null);
   const [reviewAnalysis, setReviewAnalysis] = useState(null);
   const [aiFeedbackSummary, setAiFeedbackSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    if (selectedStoreId) {
-      loadAllData();
-    }
-  }, [selectedStoreId]);
-
-  const loadAllData = async () => {
+  const loadAnalyticsData = useCallback(async (storeId) => {
     try {
       setLoading(true);
       setError(null);
       
-      console.log('분석 데이터 로딩 시작:', selectedStoreId);
+      console.log('분석 데이터 로딩 시작:', storeId);
       
-      // 실제 백엔드 API 호출
-      const [analyticsRes, statisticsRes, reviewRes, aiFeedbackRes] = await Promise.all([
-        analyticsService.getStoreAnalytics(selectedStoreId),
-        analyticsService.getStoreStatistics(selectedStoreId), // 기본값으로 한달 전부터 오늘까지
-        analyticsService.getReviewAnalysis(selectedStoreId),
-        analyticsService.getAIFeedbackSummary(selectedStoreId)
+      const [statisticsResponse, reviewResponse, feedbackResponse] = await Promise.allSettled([
+        analyticsService.getStoreStatistics(storeId),
+        analyticsService.getReviewAnalysis(storeId),
+        analyticsService.getAIFeedbackSummary(storeId)
       ]);
-      
-      console.log('Analytics Response:', analyticsRes);
-      console.log('Statistics Response:', statisticsRes);
-      console.log('Review Analysis Response:', reviewRes);
-      console.log('AI Feedback Summary Response:', aiFeedbackRes);
-      
-      setAnalytics(analyticsRes.data);
-      setStatistics(statisticsRes.data);
-      setReviewAnalysis(reviewRes.data);
-      setAiFeedbackSummary(aiFeedbackRes.data);
-      
+
+      if (statisticsResponse.status === 'fulfilled') {
+        setStatistics(statisticsResponse.value.data);
+        console.log('Statistics Response:', statisticsResponse.value);
+      } else {
+        console.error('Statistics 로드 실패:', statisticsResponse.reason);
+      }
+
+      if (reviewResponse.status === 'fulfilled') {
+        setReviewAnalysis(reviewResponse.value.data);
+        console.log('Review Analysis Response:', reviewResponse.value);
+      } else {
+        console.error('Review Analysis 로드 실패:', reviewResponse.reason);
+      }
+
+      if (feedbackResponse.status === 'fulfilled') {
+        setAiFeedbackSummary(feedbackResponse.value.data);
+        console.log('AI Feedback Summary Response:', feedbackResponse.value);
+      } else {
+        console.error('AI Feedback Summary 로드 실패:', feedbackResponse.reason);
+      }
+
     } catch (error) {
       console.error('분석 데이터 로드 실패:', error);
-      setError('분석 데이터를 불러오는데 실패했습니다.');
+      setError('분석 데이터를 불러오는 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // URL 파라미터가 변경되면 selectedStoreId 동기화
+  useEffect(() => {
+    if (storeId) {
+      const urlStoreId = parseInt(storeId);
+      if (selectedStoreId !== urlStoreId) {
+        selectStore(urlStoreId);
+      }
+    }
+  }, [storeId]);
+
+  // selectedStoreId 변경 시 데이터 로드 및 URL 동기화
+  useEffect(() => {
+    if (selectedStoreId) {
+      // URL과 selectedStoreId가 다르면 URL 업데이트
+      const currentUrlStoreId = storeId ? parseInt(storeId) : null;
+      if (currentUrlStoreId !== selectedStoreId) {
+        navigate(`/owner/analytics/${selectedStoreId}`, { replace: true });
+      }
+      // 데이터 로드
+      loadAnalyticsData(selectedStoreId);
+    }
+  }, [selectedStoreId, loadAnalyticsData]); // 의존성 없음
 
   // AI 피드백 카드 클릭 핸들러
   const handleAIFeedbackClick = () => {
@@ -152,47 +178,35 @@ const StoreAnalytics = () => {
   if (loading) {
     return (
       <Box className="mobile-container">
+        <OwnerHeader 
+          title="매장 분석"
+          subtitle="데이터 로딩 중..."
+          showStoreSelector={true}
+        />
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
           <CircularProgress />
-          <Typography sx={{ mt: 2 }}>분석 데이터를 불러오는 중...</Typography>
         </Box>
+        <OwnerNavigation />
       </Box>
     );
   }
 
   return (
     <Box className="mobile-container">
-      {/* 헤더 */}
-      <Box sx={{ 
-        p: 2, 
-        bgcolor: '#2c3e50', 
-        color: 'white',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 1
-      }}>
-        <ArrowBack 
-          onClick={() => navigate('/owner')}
-          sx={{ cursor: 'pointer' }}
-        />
-        <Box>
-          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-            매장 분석
-          </Typography>
-          <Typography variant="body2">
-            실시간 분석 데이터
-          </Typography>
-        </Box>
-      </Box>
-      
-      <Box className="content-area" sx={{ p: 2 }}>
+      <OwnerHeader 
+        title="매장 분석"
+        subtitle={selectedStore ? `${selectedStore.name} 상세 분석` : '분석 데이터'}
+        showStoreSelector={true}
+      />
+
+      <Box className="content-area">
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
           </Alert>
         )}
 
-        {/* 주요 통계 요약 */}
+        {/* 주요 지표 카드 */}
         <Grid container spacing={2} sx={{ mb: 3 }}>
           <Grid item xs={6}>
             <Card>
@@ -276,7 +290,41 @@ const StoreAnalytics = () => {
           </Card>
         )}
 
-        {/* 리뷰 분석 요약 */}
+        {/* 리뷰 감정 분석 */}
+        {getSentimentChartData().length > 0 && (
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Star sx={{ fontSize: 24, color: '#ffc107', mr: 1 }} />
+                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                  리뷰 감정 분석
+                </Typography>
+              </Box>
+              <Box sx={{ height: 200 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={getSentimentChartData()}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={40}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {getSentimentChartData().map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => [formatNumber(value), '개']} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </Box>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* AI 피드백 요약 */}
         <Card sx={{ mb: 3 }}>
           <CardContent>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -312,75 +360,43 @@ const StoreAnalytics = () => {
                 AI 피드백 데이터가 없습니다.
               </Typography>
             )}
+            
+            <Button 
+              variant="outlined" 
+              onClick={handleAIFeedbackClick}
+              sx={{ mt: 2 }}
+              fullWidth
+            >
+              상세 피드백 보기
+            </Button>
           </CardContent>
         </Card>
 
-        {/* 감정분석 결과 그래프 */}
-        {getSentimentChartData().length > 0 && (
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Star sx={{ fontSize: 24, color: '#ff5722', mr: 1 }} />
-                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                  리뷰 감정 분석
-                </Typography>
-              </Box>
-              <Box sx={{ height: 250 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={getSentimentChartData()}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {getSentimentChartData().map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              </Box>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* 액션 버튼들 */}
-        <Grid container spacing={2} sx={{ mb: 2 }}>
-          <Grid item xs={6}>
-            <Card 
-              sx={{ cursor: 'pointer', '&:hover': { bgcolor: '#f5f5f5' } }}
-              onClick={handleAIFeedbackClick}
-            >
-              <CardContent sx={{ textAlign: 'center' }}>
-                <Psychology sx={{ fontSize: 32, color: '#9c27b0', mb: 1 }} />
-                <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                  AI 피드백 상세
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={6}>
-            <Card 
-              sx={{ cursor: 'pointer', '&:hover': { bgcolor: '#f5f5f5' } }}
+        {/* 실행 계획 요약 */}
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <Assignment sx={{ fontSize: 24, color: '#ff5722', mr: 1 }} />
+              <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                실행 계획
+              </Typography>
+            </Box>
+            
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              AI 피드백을 바탕으로 생성된 실행 계획을 확인하세요.
+            </Typography>
+            
+            <Button 
+              variant="outlined" 
               onClick={handleActionPlanClick}
+              fullWidth
             >
-              <CardContent sx={{ textAlign: 'center' }}>
-                <Assignment sx={{ fontSize: 32, color: '#ff5722', mb: 1 }} />
-                <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                  실행 계획
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
+              실행 계획 관리
+            </Button>
+          </CardContent>
+        </Card>
       </Box>
-      
+
       <OwnerNavigation />
     </Box>
   );

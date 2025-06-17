@@ -24,6 +24,7 @@ import {
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useSelectedStore } from '../../contexts/SelectedStoreContext';
 import { analyticsService } from '../../services/analyticsService';
+import OwnerHeader from '../../components/common/OwnerHeader';
 import OwnerNavigation from '../../components/common/Navigation';
 
 const OwnerMainPage = () => {
@@ -74,6 +75,12 @@ const OwnerMainPage = () => {
   if (storeLoading || (stores && stores.length > 0)) {
     return (
       <Box className="mobile-container">
+        <OwnerHeader 
+          title="매장 분석"
+          subtitle="매장 정보 확인 중..."
+          showStoreSelector={true}
+          onBack={() => navigate('/owner/mypage')}
+        />
         <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
           <CircularProgress />
           <Typography sx={{ mt: 2 }}>
@@ -89,6 +96,12 @@ const OwnerMainPage = () => {
   if (!storeLoading && (!stores || stores.length === 0) && !storeError) {
     return (
       <Box className="mobile-container">
+        <OwnerHeader 
+          title="매장 분석"
+          subtitle="매장을 등록해주세요"
+          showStoreSelector={false}
+          onBack={() => navigate('/owner/mypage')}
+        />
         <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
           <Typography variant="h6" sx={{ mb: 2 }}>등록된 매장이 없습니다</Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
@@ -111,6 +124,12 @@ const OwnerMainPage = () => {
   if (storeError) {
     return (
       <Box className="mobile-container">
+        <OwnerHeader 
+          title="매장 분석"
+          subtitle="오류 발생"
+          showStoreSelector={true}
+          onBack={() => navigate('/owner/mypage')}
+        />
         <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
           <Typography variant="h6" sx={{ mb: 2 }}>매장 정보를 불러올 수 없습니다</Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
@@ -132,6 +151,12 @@ const OwnerMainPage = () => {
   // 기본 로딩 화면 (fallback)
   return (
     <Box className="mobile-container">
+      <OwnerHeader 
+        title="매장 분석"
+        subtitle="로딩 중..."
+        showStoreSelector={true}
+        onBack={() => navigate('/owner/mypage')}
+      />
       <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
         <CircularProgress />
         <Typography sx={{ mt: 2 }}>로딩 중...</Typography>

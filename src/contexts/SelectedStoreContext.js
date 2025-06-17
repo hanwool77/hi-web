@@ -36,11 +36,17 @@ export const SelectedStoreProvider = ({ children }) => {
       console.log('매장 목록 응답:', response);
       
       if (response.success && response.data) {
-        setStores(response.data);
+        // 필드명 통일: storeName -> name으로 변환하여 기존 코드와 호환
+        const storesWithName = response.data.map(store => ({
+          ...store,
+          name: store.storeName // storeName을 name으로 복사
+        }));
+        
+        setStores(storesWithName);
         
         // 매장이 있으면 첫 번째 매장을 자동 선택
-        if (response.data.length > 0) {
-          const firstStoreId = response.data[0].storeId;
+        if (storesWithName.length > 0) {
+          const firstStoreId = storesWithName[0].storeId;
           setSelectedStoreId(firstStoreId);
           localStorage.setItem('selectedStoreId', firstStoreId.toString());
           console.log('첫 번째 매장 자동 선택:', firstStoreId);
