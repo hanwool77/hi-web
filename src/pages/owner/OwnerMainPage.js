@@ -80,6 +80,7 @@ const OwnerMainPage = () => {
           title="매장 분석"
           subtitle="매장 정보 확인 중..."
           showStoreSelector={true}
+          showBackButton={false}
           onBack={() => navigate('/owner/mypage')}
         />
         <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
@@ -101,6 +102,7 @@ const OwnerMainPage = () => {
           title="매장 분석"
           subtitle="매장을 등록해주세요"
           showStoreSelector={false}
+          showBackButton={false}
           onBack={() => navigate('/owner/mypage')}
         />
         <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
@@ -129,6 +131,7 @@ const OwnerMainPage = () => {
           title="매장 분석"
           subtitle="오류 발생"
           showStoreSelector={true}
+          showBackButton={false}
           onBack={() => navigate('/owner/mypage')}
         />
         <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
@@ -156,6 +159,7 @@ const OwnerMainPage = () => {
         title="매장 분석"
         subtitle="로딩 중..."
         showStoreSelector={true}
+        showBackButton={false}
         onBack={() => navigate('/owner/mypage')}
       />
       <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>

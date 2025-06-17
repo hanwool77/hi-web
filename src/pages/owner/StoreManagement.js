@@ -128,6 +128,7 @@ const StoreManagement = () => {
           title="매장 관리"
           subtitle="매장 정보 로딩 중..."
           showStoreSelector={true}
+          showBackButton={false}
         />
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
           <CircularProgress />
@@ -143,6 +144,7 @@ const StoreManagement = () => {
         title="매장 관리"
         subtitle={selectedStore ? `${selectedStore.name} 관리` : '매장을 선택해주세요'}
         showStoreSelector={true}
+        showBackButton={false}
       />
       
       <Box className="content-area">

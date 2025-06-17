@@ -197,6 +197,7 @@ const StoreAnalytics = () => {
         title="매장 분석"
         subtitle={selectedStore ? `${selectedStore.name} 상세 분석` : '분석 데이터'}
         showStoreSelector={true}
+        showBackButton={false}
       />
 
       <Box className="content-area">

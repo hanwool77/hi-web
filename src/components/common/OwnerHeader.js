@@ -18,6 +18,7 @@ const OwnerHeader = ({
   subtitle, 
   onBack, 
   showStoreSelector = true,
+  showBackButton = true,
   backPath = '/owner'
 }) => {
   const navigate = useNavigate();
@@ -54,10 +55,12 @@ const OwnerHeader = ({
     }}>
       {/* 좌측: 뒤로가기 + 타이틀 */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
-        <ArrowBack 
-          onClick={handleBack}
-          sx={{ cursor: 'pointer' }}
-        />
+        {showBackButton && ( 
+          <ArrowBack 
+            onClick={handleBack}
+            sx={{ cursor: 'pointer' }}
+          />
+        )}  
         <Box sx={{ minWidth: 0, flex: 1 }}>
           <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '1rem' }}>
             {title}

@@ -70,10 +70,12 @@ const OwnerMyPage = () => {
         alignItems: 'center',
         gap: 1
       }}>
-        <ArrowBack 
-          onClick={() => navigate('/owner')}
-          sx={{ cursor: 'pointer' }}
-        />
+      {/* 
+      <ArrowBack 
+        onClick={() => navigate('/owner')}
+        sx={{ cursor: 'pointer' }}
+      />
+      */}
         <Box>
           <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
             마이페이지
