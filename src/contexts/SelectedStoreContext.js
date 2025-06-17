@@ -1,107 +1,120 @@
 //* src/contexts/SelectedStoreContext.js
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { storeApi } from '../services/api';
+import { useAuth } from './AuthContext';
+import { storeService } from '../services/storeService';
 
 const SelectedStoreContext = createContext();
 
 export const useSelectedStore = () => {
   const context = useContext(SelectedStoreContext);
   if (!context) {
-    throw new Error('useSelectedStore must be used within SelectedStoreProvider');
+    throw new Error('useSelectedStore must be used within a SelectedStoreProvider');
   }
   return context;
 };
 
 export const SelectedStoreProvider = ({ children }) => {
+  const { user, isAuthenticated } = useAuth();
   const [selectedStoreId, setSelectedStoreId] = useState(null);
   const [stores, setStores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // 내 매장 목록 로드 및 첫 번째 매장 자동 선택
-  useEffect(() => {
-    loadMyStores();
-  }, []);
+  // 매장 목록 로드
+  const loadStores = async () => {
+    if (!isAuthenticated() || user?.role !== 'OWNER') {
+      setLoading(false);
+      return;
+    }
 
-  const loadMyStores = async () => {
     try {
       setLoading(true);
       setError(null);
+      console.log('매장 목록 로드 시작');
       
-      const response = await storeApi.get('/api/stores/my');
-      console.log('매장 목록 API 응답:', response.data);
+      const response = await storeService.getMyStores();
+      console.log('매장 목록 응답:', response);
       
-      // API 응답 구조에 따라 데이터 추출
-      let storeList = [];
-      if (response.data && response.data.success && Array.isArray(response.data.data)) {
-        storeList = response.data.data;
-      } else if (Array.isArray(response.data)) {
-        storeList = response.data;
-      }
-      
-      setStores(storeList);
-      
-      // 저장된 매장 ID 확인 (sessionStorage 사용)
-      const savedStoreId = sessionStorage.getItem('selectedStoreId');
-      
-      if (savedStoreId && storeList.find(store => store.storeId === parseInt(savedStoreId))) {
-        // 저장된 매장 ID가 유효하면 사용
-        const storeId = parseInt(savedStoreId);
-        setSelectedStoreId(storeId);
-        console.log('저장된 매장 ID 사용:', storeId);
-      } else if (storeList.length > 0) {
-        // 그렇지 않으면 첫 번째 매장 선택
-        const firstStoreId = storeList[0].storeId;
-        setSelectedStoreId(firstStoreId);
-        sessionStorage.setItem('selectedStoreId', firstStoreId.toString());
-        console.log('첫 번째 매장 자동 선택:', firstStoreId);
+      if (response.success && response.data) {
+        setStores(response.data);
+        
+        // 매장이 있으면 첫 번째 매장을 자동 선택
+        if (response.data.length > 0) {
+          const firstStoreId = response.data[0].storeId;
+          setSelectedStoreId(firstStoreId);
+          localStorage.setItem('selectedStoreId', firstStoreId.toString());
+          console.log('첫 번째 매장 자동 선택:', firstStoreId);
+        } else {
+          setSelectedStoreId(null);
+          localStorage.removeItem('selectedStoreId');
+          console.log('등록된 매장이 없음');
+        }
       } else {
-        // 매장이 없는 경우
+        console.error('매장 목록 로드 실패:', response.message);
+        setError(response.message || '매장 목록을 불러올 수 없습니다.');
+        setStores([]);
         setSelectedStoreId(null);
-        sessionStorage.removeItem('selectedStoreId');
-        console.log('매장이 없음');
       }
     } catch (error) {
-      console.error('매장 목록 로드 실패:', error);
-      setError('매장 목록을 불러올 수 없습니다.');
-      
-      // 에러 발생 시에도 빈 배열로 설정
+      console.error('매장 목록 로드 중 오류:', error);
+      setError('매장 목록을 불러오는 중 오류가 발생했습니다.');
       setStores([]);
       setSelectedStoreId(null);
-      sessionStorage.removeItem('selectedStoreId');
     } finally {
       setLoading(false);
     }
   };
 
-  // 매장 ID 변경 시 sessionStorage에 저장
-  const handleSetSelectedStoreId = (storeId) => {
-    console.log('매장 ID 변경:', storeId);
+  // 사용자 인증 상태 변경 시 매장 목록 로드
+  useEffect(() => {
+    if (isAuthenticated() && user?.role === 'OWNER') {
+      loadStores();
+    } else {
+      setStores([]);
+      setSelectedStoreId(null);
+      setLoading(false);
+      setError(null);
+    }
+  }, [user, isAuthenticated]);
+
+  // 페이지 로드 시 저장된 매장 ID 복원
+  useEffect(() => {
+    const savedStoreId = localStorage.getItem('selectedStoreId');
+    if (savedStoreId && stores.length > 0) {
+      const storeExists = stores.some(store => store.storeId === parseInt(savedStoreId));
+      if (storeExists) {
+        setSelectedStoreId(parseInt(savedStoreId));
+      }
+    }
+  }, [stores]);
+
+  const selectStore = (storeId) => {
     setSelectedStoreId(storeId);
     if (storeId) {
-      sessionStorage.setItem('selectedStoreId', storeId.toString());
+      localStorage.setItem('selectedStoreId', storeId.toString());
     } else {
-      sessionStorage.removeItem('selectedStoreId');
+      localStorage.removeItem('selectedStoreId');
     }
   };
 
-  // 매장 목록 새로고침 함수
   const refreshStores = () => {
-    console.log('매장 목록 새로고침');
-    loadMyStores();
+    loadStores();
+  };
+
+  const selectedStore = stores.find(store => store.storeId === selectedStoreId) || null;
+
+  const value = {
+    selectedStoreId,
+    selectedStore,
+    stores,
+    loading,
+    error,
+    selectStore,
+    refreshStores
   };
 
   return (
-    <SelectedStoreContext.Provider 
-      value={{ 
-        selectedStoreId, 
-        setSelectedStoreId: handleSetSelectedStoreId,
-        stores,
-        loading,
-        error,
-        refreshStores
-      }}
-    >
+    <SelectedStoreContext.Provider value={value}>
       {children}
     </SelectedStoreContext.Provider>
   );

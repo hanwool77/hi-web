@@ -28,7 +28,7 @@ import OwnerNavigation from '../../components/common/Navigation';
 
 const OwnerMainPage = () => {
   const navigate = useNavigate();
-  const { selectedStoreId, loading: storeLoading, stores } = useSelectedStore();
+  const { selectedStoreId, loading: storeLoading, stores, error: storeError } = useSelectedStore();
   const [analyticsData, setAnalyticsData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -70,21 +70,23 @@ const OwnerMainPage = () => {
     navigate('/owner/action-plan/list');
   };
 
-  // 매장 정보 로딩 중
-  if (storeLoading) {
+  // 매장 정보 로딩 중이거나 매장이 있는 경우 로딩 표시
+  if (storeLoading || (stores && stores.length > 0)) {
     return (
       <Box className="mobile-container">
         <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
           <CircularProgress />
-          <Typography sx={{ mt: 2 }}>매장 정보를 불러오는 중...</Typography>
+          <Typography sx={{ mt: 2 }}>
+            {storeLoading ? '매장 정보를 불러오는 중...' : '분석 페이지로 이동 중...'}
+          </Typography>
         </Box>
         <OwnerNavigation />
       </Box>
     );
   }
 
-  // 매장이 없는 경우
-  if (!selectedStoreId && stores.length === 0) {
+  // 매장이 명확히 없는 경우만 등록 안내 표시
+  if (!storeLoading && (!stores || stores.length === 0) && !storeError) {
     return (
       <Box className="mobile-container">
         <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
@@ -105,25 +107,34 @@ const OwnerMainPage = () => {
     );
   }
 
-  // 매장이 있지만 아직 선택되지 않은 경우 (로딩 중)
-  if (!selectedStoreId && stores.length > 0) {
+  // 오류가 발생한 경우
+  if (storeError) {
     return (
       <Box className="mobile-container">
         <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
-          <CircularProgress />
-          <Typography sx={{ mt: 2 }}>매장 선택 중...</Typography>
+          <Typography variant="h6" sx={{ mb: 2 }}>매장 정보를 불러올 수 없습니다</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            새로고침 후 다시 시도해주세요.
+          </Typography>
+          <Button 
+            variant="contained" 
+            sx={{ mt: 2 }}
+            onClick={() => window.location.reload()}
+          >
+            새로고침
+          </Button>
         </Box>
         <OwnerNavigation />
       </Box>
     );
   }
 
-  // 이 부분은 실행되지 않아야 함 (리다이렉트됨)
+  // 기본 로딩 화면 (fallback)
   return (
     <Box className="mobile-container">
       <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
         <CircularProgress />
-        <Typography sx={{ mt: 2 }}>분석 페이지로 이동 중...</Typography>
+        <Typography sx={{ mt: 2 }}>로딩 중...</Typography>
       </Box>
       <OwnerNavigation />
     </Box>
