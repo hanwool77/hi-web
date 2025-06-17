@@ -1,4 +1,3 @@
-//* src/pages/owner/OwnerMainPage.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -32,14 +31,16 @@ const OwnerMainPage = () => {
   const { selectedStoreId, loading: storeLoading, stores, error: storeError } = useSelectedStore();
   const [analyticsData, setAnalyticsData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [hasRedirected, setHasRedirected] = useState(false); // 리다이렉트 상태 추가
 
-  // 매장이 선택되면 자동으로 분석 페이지로 리다이렉트
+  // 매장이 선택되면 자동으로 분석 페이지로 리다이렉트 (단, 한 번만)
   useEffect(() => {
-    if (!storeLoading && selectedStoreId) {
+    if (!storeLoading && selectedStoreId && !hasRedirected) {
       console.log('매장 선택됨, 분석 페이지로 이동:', selectedStoreId);
+      setHasRedirected(true);
       navigate(`/owner/analytics/${selectedStoreId}`, { replace: true });
     }
-  }, [selectedStoreId, storeLoading, navigate]);
+  }, [selectedStoreId, storeLoading, navigate, hasRedirected]);
 
   useEffect(() => {
     if (selectedStoreId) {
@@ -71,8 +72,8 @@ const OwnerMainPage = () => {
     navigate('/owner/action-plan/list');
   };
 
-  // 매장 정보 로딩 중이거나 매장이 있는 경우 로딩 표시
-  if (storeLoading || (stores && stores.length > 0)) {
+  // 매장 정보 로딩 중인 경우
+  if (storeLoading) {
     return (
       <Box className="mobile-container">
         <OwnerHeader 
@@ -84,7 +85,7 @@ const OwnerMainPage = () => {
         <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
           <CircularProgress />
           <Typography sx={{ mt: 2 }}>
-            {storeLoading ? '매장 정보를 불러오는 중...' : '분석 페이지로 이동 중...'}
+            매장 정보를 불러오는 중...
           </Typography>
         </Box>
         <OwnerNavigation />

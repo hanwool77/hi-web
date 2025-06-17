@@ -1,4 +1,3 @@
-//* src/contexts/AuthContext.js (수정된 버전)
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authApi } from '../services/api';
 
@@ -19,10 +18,9 @@ export const AuthProvider = ({ children }) => {
 
   const loadUserProfile = async () => {
     try {
-      setLoading(true);
       const response = await authApi.get('/api/members/profile');
       
-      // ✅ 기존 user 정보와 서버 응답을 병합 (role 정보 보존)
+      // 기존 user 정보와 서버 응답을 병합 (role 정보 보존)
       setUser(prevUser => ({
         ...prevUser, // 기존 정보 유지 (특히 role)
         ...response.data, // 서버에서 받은 새 정보로 업데이트
@@ -32,10 +30,7 @@ export const AuthProvider = ({ children }) => {
       return true;
     } catch (error) {
       console.error('사용자 정보 로드 실패:', error);
-      logout();
-      return false;
-    } finally {
-      setLoading(false);
+      return false; // logout 호출 제거
     }
   };
 
@@ -54,7 +49,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const initAuth = async () => {
       if (token) {
-        // ✅ sessionStorage에서 저장된 role 정보 먼저 복원
+        // sessionStorage에서 저장된 정보 먼저 복원
         const savedRole = sessionStorage.getItem('role');
         const savedMemberId = sessionStorage.getItem('memberId');
         
@@ -71,11 +66,11 @@ export const AuthProvider = ({ children }) => {
         if (isValid) {
           await loadUserProfile();
         } else {
+          // 토큰이 유효하지 않으면 인증 상태 초기화
           logout();
         }
-      } else {
-        setLoading(false);
       }
+      setLoading(false); // 모든 경우에 로딩 종료
     };
     
     initAuth();
@@ -98,14 +93,13 @@ export const AuthProvider = ({ children }) => {
       
       setToken(accessToken);
       
-      // ✅ 사용자 정보 설정
+      // 사용자 정보 설정
       setUser({
         memberId,
         role,
         username
       });
       
-      // ✅ loadUserProfile 호출하지 않음 (role 덮어쓰기 방지)
       setLoading(false);
       
       return { success: true, role };
