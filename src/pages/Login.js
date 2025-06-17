@@ -28,7 +28,7 @@ const Login = () => {
     if (user.role === 'OWNER') {
       navigate('/owner', { replace: true });
     } else {
-      navigate('/', { replace: true }); // 고객은 메인 페이지로
+      navigate('/customer', { replace: true }); // ✅ 수정
     }
   }
   }, [authLoading, isAuthenticated, user, navigate]); 
@@ -58,7 +58,7 @@ const Login = () => {
         if (result.role === 'OWNER') {
           navigate('/owner', { replace: true });
         } else {
-          navigate('/', { replace: true }); // 고객은 메인 페이지로
+          navigate('/customer', { replace: true }); // ✅ 수정
         }
       } else {
         setError(result.message || '로그인에 실패했습니다.');
