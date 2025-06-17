@@ -242,7 +242,10 @@ const AIFeedbackDetail = () => {
         zIndex: 1000
       }}>
         <ArrowBack 
-          onClick={() => navigate('/owner/ai-feedback')} 
+          onClick={() => {
+            console.log('뒤로가기 클릭, selectedStoreId:', selectedStoreId);
+            navigate(`/owner/analytics/${selectedStoreId}`);
+          }} 
           sx={{ fontSize: 24, cursor: 'pointer', mr: 2 }}
         />
         <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
