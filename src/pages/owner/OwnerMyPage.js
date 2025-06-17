@@ -31,7 +31,7 @@ const OwnerMyPage = () => {
       icon: <AddBusiness sx={{ fontSize: 40, color: '#4caf50' }} />,
       title: '매장 등록',
       description: '새로운 매장 정보 등록',
-      action: () => navigate('/owner/store/register')
+      action: () => navigate('/owner/store-registration')
     },
     {
       icon: <Store sx={{ fontSize: 40, color: '#2196f3' }} />,

@@ -183,7 +183,7 @@ function App() {
                   <SubscriptionManagement />
                 </ProtectedRoute>
               } />
-              <Route path="/owner/profile" element={
+              <Route path="/owner/ProfileEdit" element={
                 <ProtectedRoute requiredRole="OWNER">
                   <ProfileEdit />
                 </ProtectedRoute>

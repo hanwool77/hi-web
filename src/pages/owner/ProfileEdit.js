@@ -34,11 +34,15 @@ const ProfileEdit = () => {
   const loadProfile = async () => {
     try {
       const response = await memberApi.get('/api/members/profile');
+      
+      // 안전한 접근으로 수정
+      const profileData = response.data?.data || response.data || {};
+      
       setProfile(prev => ({
         ...prev,
-        username: response.data.data.username,
-        nickname: response.data.data.nickname,
-        phone: response.data.data.phone
+        username: profileData.username || '',
+        nickname: profileData.nickname || '',
+        phone: profileData.phone || ''
       }));
     } catch (error) {
       console.error('프로필 로드 실패:', error);
@@ -91,9 +95,14 @@ const ProfileEdit = () => {
     }
   };
 
+  // 로딩 중일 때는 빈 컴포넌트 반환하여 에러 방지
+  if (loading) {
+    return <Box className="mobile-container"></Box>;
+  }
+
   return (
     <Box className="mobile-container">
-      {/* 헤더 */}
+      {/* Header */}
       <Box sx={{ 
         p: 2, 
         bgcolor: '#2c3e50', 
@@ -106,26 +115,25 @@ const ProfileEdit = () => {
           onClick={() => navigate('/owner/mypage')}
           sx={{ cursor: 'pointer' }}
         />
-        <Box>
-          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-            회원정보 수정
-          </Typography>
-        </Box>
+        <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+          회원정보 수정
+        </Typography>
       </Box>
-      
+
+      {/* Content Area - 모바일 최적화된 콘텐츠 영역 */}
       <Box className="content-area">
-        {/* 기본 정보 */}
         <Card sx={{ mb: 3 }}>
           <CardContent>
             <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
               기본 정보
             </Typography>
+            
             <Grid container spacing={2}>
               <Grid item xs={12}>
                 <TextField
                   fullWidth
                   label="아이디"
-                  value={profile.username}
+                  value={profile?.username || ''}
                   disabled
                   helperText="아이디는 변경할 수 없습니다"
                 />
@@ -135,15 +143,16 @@ const ProfileEdit = () => {
                 <TextField
                   fullWidth
                   label="닉네임"
-                  value={profile.nickname}
+                  value={profile?.nickname || ''}
                   onChange={(e) => handleInputChange('nickname', e.target.value)}
                 />
               </Grid>
+              
               <Grid item xs={12}>
                 <TextField
                   fullWidth
                   label="전화번호"
-                  value={profile.phone}
+                  value={profile?.phone || ''}
                   onChange={(e) => handleInputChange('phone', e.target.value)}
                 />
               </Grid>
@@ -161,19 +170,19 @@ const ProfileEdit = () => {
           </CardContent>
         </Card>
 
-        {/* 비밀번호 변경 */}
         <Card>
           <CardContent>
             <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
               비밀번호 변경
             </Typography>
+            
             <Grid container spacing={2}>
               <Grid item xs={12}>
                 <TextField
                   fullWidth
-                  label="현재 비밀번호"
                   type="password"
-                  value={profile.currentPassword}
+                  label="현재 비밀번호"
+                  value={profile?.currentPassword || ''}
                   onChange={(e) => handleInputChange('currentPassword', e.target.value)}
                 />
               </Grid>
@@ -181,9 +190,9 @@ const ProfileEdit = () => {
               <Grid item xs={12}>
                 <TextField
                   fullWidth
-                  label="새 비밀번호"
                   type="password"
-                  value={profile.newPassword}
+                  label="새 비밀번호"
+                  value={profile?.newPassword || ''}
                   onChange={(e) => handleInputChange('newPassword', e.target.value)}
                 />
               </Grid>
@@ -191,9 +200,9 @@ const ProfileEdit = () => {
               <Grid item xs={12}>
                 <TextField
                   fullWidth
-                  label="새 비밀번호 확인"
                   type="password"
-                  value={profile.confirmPassword}
+                  label="새 비밀번호 확인"
+                  value={profile?.confirmPassword || ''}
                   onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
                 />
               </Grid>
@@ -201,17 +210,16 @@ const ProfileEdit = () => {
             
             <Button
               fullWidth
-              variant="outlined"
+              variant="contained"
               onClick={handleChangePassword}
               sx={{ mt: 2 }}
-              disabled={!profile.currentPassword || !profile.newPassword || !profile.confirmPassword}
             >
               비밀번호 변경
             </Button>
           </CardContent>
         </Card>
       </Box>
-      
+
       <OwnerNavigation />
     </Box>
   );
