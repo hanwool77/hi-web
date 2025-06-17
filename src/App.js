@@ -148,6 +148,11 @@ function App() {
                   <StoreManagement />
                 </ProtectedRoute>
               } />
+              <Route path="/owner/store-management/:storeId" element={
+                <ProtectedRoute requiredRole="OWNER">
+                  <StoreManagement />
+                </ProtectedRoute>
+              } />
               <Route path="/owner/menu-management" element={
                 <ProtectedRoute requiredRole="OWNER">
                   <MenuManagement />

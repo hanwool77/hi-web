@@ -118,14 +118,14 @@ const StoresList = () => {
                       <Button
                         size="small"
                         startIcon={<Analytics />}
-                        onClick={() => navigate(`/owner/stores/${store.id}/analytics`)}
+                        onClick={() => navigate(`/owner/analytics/${store.storeId || store.id}`)}
                       >
                         분석
                       </Button>
                       <Button
                         size="small"
                         startIcon={<Settings />}
-                        onClick={() => navigate(`/owner/stores/${store.id}/management`)}
+                        onClick={() => navigate(`/owner/store-management/${store.storeId || store.id}`)}
                       >
                         관리
                       </Button>
