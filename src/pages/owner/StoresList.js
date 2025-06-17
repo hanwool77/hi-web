@@ -5,7 +5,7 @@ import {
   Box, Typography, Card, CardContent, Button, Grid,
   Avatar, Chip, IconButton, CircularProgress
 } from '@mui/material';
-import { ArrowBack, Add, Analytics, Settings, Delete } from '@mui/icons-material';
+import { ArrowBack, Add, Delete } from '@mui/icons-material';
 import { storeService } from '../../services/storeService';
 import OwnerNavigation from '../../components/common/OwnerNavigation';
 
@@ -61,6 +61,15 @@ const StoresList = () => {
     }
   };
 
+  // 운영 상태 표시 함수 (수정됨)
+  const getStatusDisplay = (status) => {
+    if (status === 'ACTIVE' || status === '운영중') {
+      return { label: '운영중', color: 'success' };
+    } else {
+      return { label: '휴업', color: 'default' };
+    }
+  };
+
   return (
     <Box className="mobile-container">
       {/* 헤더 */}
@@ -100,60 +109,48 @@ const StoresList = () => {
           </Card>
         ) : (
           <Grid container spacing={2}>
-            {stores.map((storeItem) => (
-              <Grid item xs={12} key={storeItem.storeId || storeItem.id}>
-                <Card>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', gap: 2 }}>
-                      <Avatar
-                        src={storeItem.image || '/images/store-default.jpg'}
-                        sx={{ width: 60, height: 60 }}
-                      />
-                      <Box sx={{ flex: 1 }}>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                          {storeItem.storeName || storeItem.name}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {storeItem.category} • {storeItem.address}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          📞 {storeItem.phone}
-                        </Typography>
-                        <Chip 
-                          label={storeItem.status === 'ACTIVE' ? '운영중' : '휴업'} 
-                          color={storeItem.status === 'ACTIVE' ? 'success' : 'default'}
-                          size="small"
-                          sx={{ mt: 1 }}
+            {stores.map((storeItem) => {
+              const statusInfo = getStatusDisplay(storeItem.status);
+              return (
+                <Grid item xs={12} key={storeItem.storeId || storeItem.id}>
+                  <Card>
+                    <CardContent>
+                      <Box sx={{ display: 'flex', gap: 2 }}>
+                        <Avatar
+                          src={storeItem.image || '/images/store-default.jpg'}
+                          sx={{ width: 60, height: 60 }}
                         />
+                        <Box sx={{ flex: 1 }}>
+                          <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                            {storeItem.storeName || storeItem.name}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {storeItem.category} • {storeItem.address}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            📞 {storeItem.phone}
+                          </Typography>
+                          <Chip 
+                            label={statusInfo.label}
+                            color={statusInfo.color}
+                            size="small"
+                            sx={{ mt: 1 }}
+                          />
+                        </Box>
+                        <IconButton
+                          onClick={() => handleDeleteStore(storeItem.storeId || storeItem.id)}
+                          color="error"
+                          size="small"
+                        >
+                          <Delete />
+                        </IconButton>
                       </Box>
-                      <IconButton
-                        onClick={() => handleDeleteStore(storeItem.storeId || storeItem.id)}
-                        color="error"
-                        size="small"
-                      >
-                        <Delete />
-                      </IconButton>
-                    </Box>
-                    <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
-                      <Button
-                        size="small"
-                        startIcon={<Analytics />}
-                        onClick={() => navigate(`/owner/analytics/${storeItem.storeId || storeItem.id}`)}
-                      >
-                        분석
-                      </Button>
-                      <Button
-                        size="small"
-                        startIcon={<Settings />}
-                        onClick={() => navigate(`/owner/store-management/${storeItem.storeId || storeItem.id}`)}
-                      >
-                        관리
-                      </Button>
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
+                      {/* 분석/관리 버튼 삭제됨 */}
+                    </CardContent>
+                  </Card>
+                </Grid>
+              );
+            })}
           </Grid>
         )}
       </Box>
