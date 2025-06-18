@@ -41,10 +41,10 @@ const ExternalIntegration = () => {
       name: '카카오맵',
       icon: '🟡',
       description: '카카오맵 리뷰',
-      connected: false,
-      lastSync: null,
-      reviewCount: 0,
-      status: 'disconnected',
+      connected: true,
+      lastSync: '30분 전',
+      reviewCount: 18,
+      status: 'connected',
       externalStoreId: storeId
     },
     {
