@@ -43,9 +43,33 @@ export const analyticsService = {
     return response.data;
   },
 
-  // AI 분석 생성 요청
+  // AI 분석 생성 요청 (긴 타임아웃 설정)
   generateAIAnalysis: async (storeId, request) => {
-    const response = await analyticsApi.post(`/api/analytics/stores/${storeId}/ai-analysis`, request);
+    // 런타임 설정에서 analytics 서비스 URL 가져오기
+    const getServiceUrl = () => {
+      const config = window.__runtime_config__ || {};
+      if (config.API_GATEWAY_URL) {
+        return config.API_GATEWAY_URL;
+      }
+      return config.ANALYTICS_SERVICE_URL || 'http://20.1.2.3:8084';
+    };
+
+    // 긴 타임아웃을 위한 별도 axios 인스턴스 생성
+    const longTimeoutApi = axios.create({
+      baseURL: getServiceUrl(),
+      timeout: 30000, // 30초 타임아웃
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    // 토큰 추가
+    const token = sessionStorage.getItem('token');
+    if (token) {
+      longTimeoutApi.defaults.headers.Authorization = `Bearer ${token}`;
+    }
+
+    const response = await longTimeoutApi.post(`/api/analytics/stores/${storeId}/ai-analysis`, request);
     return response.data;
   },
 
