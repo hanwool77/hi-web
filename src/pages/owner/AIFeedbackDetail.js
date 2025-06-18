@@ -16,7 +16,8 @@ import {
   ListItemText,
   Checkbox,
   FormControlLabel,
-  Button
+  Button,
+  Snackbar
 } from '@mui/material';
 import { 
   ArrowBack, 
@@ -44,6 +45,8 @@ const AIFeedbackDetail = () => {
   const [selectedImprovements, setSelectedImprovements] = useState([]);
   const [actionPlanLoading, setActionPlanLoading] = useState(false);
   const [disabledImprovements, setDisabledImprovements] = useState([]);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
     if (selectedStoreId) {
@@ -171,8 +174,13 @@ const AIFeedbackDetail = () => {
         clearTimeout(timeoutId);
         console.log('실행계획 생성 응답:', response);
         
-        // 성공 메시지 표시
-        alert('실행계획이 성공적으로 생성되었습니다.');
+        setSuccessMessage('실행계획이 성공적으로 생성되었습니다!');
+        setShowSuccess(true);
+
+        // 1.5초 후 실행계획 목록으로 이동
+        setTimeout(() => {
+          navigate('/owner/action-plan/list');
+        }, 1500);
         
         // 새로 선택된 항목들을 비활성화 목록에 추가
         setDisabledImprovements(prev => [...prev, ...availableSelections]);
