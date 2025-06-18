@@ -54,7 +54,7 @@ const MainPage = () => {
   };
 
   const handleStoreClick = (storeId) => {
-    navigate(`/stores/${storeId}`);
+    navigate(`/customer/store/${storeId}`);
   };
 
   const handleTagClick = (tag) => {
