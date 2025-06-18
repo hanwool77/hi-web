@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Box, Typography, Card, CardContent, Button,
   Chip, Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, Grid, CircularProgress
+  TextField, CircularProgress, Menu, MenuItem
 } from '@mui/material';
 import { 
   Link, LinkOff, Sync, CheckCircle, Warning, Error
@@ -22,8 +22,9 @@ const ExternalIntegration = () => {
   const [credentials, setCredentials] = useState({ username: '', password: '' });
   const [syncing, setSyncing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [syncMenuAnchor, setSyncMenuAnchor] = useState(null);
 
-  const platformsData = [
+  const getPlatformsData = (storeId) => [
     {
       id: 'NAVER',
       name: '네이버 플레이스',
@@ -32,7 +33,8 @@ const ExternalIntegration = () => {
       connected: false,
       lastSync: null,
       reviewCount: 0,
-      status: 'disconnected'
+      status: 'disconnected',
+      externalStoreId: storeId
     },
     {
       id: 'KAKAO',
@@ -42,7 +44,8 @@ const ExternalIntegration = () => {
       connected: false,
       lastSync: null,
       reviewCount: 0,
-      status: 'disconnected'
+      status: 'disconnected',
+      externalStoreId: storeId
     },
     {
       id: 'GOOGLE',
@@ -52,7 +55,8 @@ const ExternalIntegration = () => {
       connected: false,
       lastSync: null,
       reviewCount: 0,
-      status: 'disconnected'
+      status: 'disconnected',
+      externalStoreId: storeId
     },
     {
       id: 'HIORDER',
@@ -62,7 +66,8 @@ const ExternalIntegration = () => {
       connected: true,
       lastSync: '1시간 전',
       reviewCount: 25,
-      status: 'connected'
+      status: 'connected',
+      externalStoreId: storeId
     }
   ];
 
@@ -70,7 +75,7 @@ const ExternalIntegration = () => {
     if (selectedStoreId) {
       loadPlatformStatus();
     } else {
-      setPlatforms(platformsData);
+      setPlatforms(getPlatformsData(null));
       setLoading(false);
     }
   }, [selectedStoreId]);
@@ -80,11 +85,11 @@ const ExternalIntegration = () => {
       setLoading(true);
       // TODO: 실제 API 호출로 플랫폼 연동 상태 조회
       // const response = await externalService.getPlatformStatus(selectedStoreId);
-      // setPlatforms(response.data || platformsData);
-      setPlatforms(platformsData);
+      // setPlatforms(response.data || getPlatformsData(selectedStoreId));
+      setPlatforms(getPlatformsData(selectedStoreId));
     } catch (error) {
       console.error('플랫폼 상태 로드 실패:', error);
-      setPlatforms(platformsData);
+      setPlatforms(getPlatformsData(selectedStoreId));
     } finally {
       setLoading(false);
     }
@@ -107,7 +112,6 @@ const ExternalIntegration = () => {
 
     if (window.confirm('연동을 해제하시겠습니까?')) {
       try {
-        // TODO: 실제 연동 해제 API 호출
         await externalService.disconnectPlatform(selectedStoreId, platformId);
         alert('연동이 해제되었습니다.');
         loadPlatformStatus();
@@ -146,79 +150,84 @@ const ExternalIntegration = () => {
     }
   };
 
-  const handleSyncReviews = async () => {
+  // 개별 플랫폼 리뷰 동기화
+  const handleSyncReviews = async (platform) => {
     if (!selectedStoreId) {
       alert('매장을 선택해주세요.');
       return;
     }
 
+    if (!platform.connected) {
+      alert('연동되지 않은 플랫폼입니다.');
+      return;
+    }
+
     try {
       setSyncing(true);
-      await externalService.syncReviews(selectedStoreId);
-      alert('리뷰 동기화가 완료되었습니다.');
+      await externalService.syncReviews(
+        selectedStoreId, 
+        platform.id, 
+        platform.externalStoreId
+      );
+      alert(`${platform.name} 리뷰 동기화가 완료되었습니다.`);
       loadPlatformStatus();
     } catch (error) {
       console.error('리뷰 동기화 실패:', error);
       alert('리뷰 동기화에 실패했습니다.');
     } finally {
       setSyncing(false);
+      setSyncMenuAnchor(null);
+    }
+  };
+
+  // 모든 플랫폼 리뷰 동기화
+  const handleSyncAllReviews = async () => {
+    if (!selectedStoreId) {
+      alert('매장을 선택해주세요.');
+      return;
+    }
+
+    const connectedPlatforms = platforms.filter(p => p.connected);
+    if (connectedPlatforms.length === 0) {
+      alert('연동된 플랫폼이 없습니다.');
+      return;
+    }
+
+    try {
+      setSyncing(true);
+      await externalService.syncAllReviews(selectedStoreId);
+      alert('모든 플랫폼 리뷰 동기화가 완료되었습니다.');
+      loadPlatformStatus();
+    } catch (error) {
+      console.error('전체 리뷰 동기화 실패:', error);
+      alert('전체 리뷰 동기화에 실패했습니다.');
+    } finally {
+      setSyncing(false);
+      setSyncMenuAnchor(null);
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'connected': return 'success';
+      case 'warning': return 'warning';
+      case 'error': return 'error';
+      default: return 'default';
     }
   };
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'connected':
-        return <CheckCircle sx={{ color: 'success.main' }} />;
-      case 'error':
-        return <Error sx={{ color: 'error.main' }} />;
-      case 'warning':
-        return <Warning sx={{ color: 'warning.main' }} />;
-      default:
-        return <LinkOff sx={{ color: 'text.secondary' }} />;
+      case 'connected': return <CheckCircle />;
+      case 'warning': return <Warning />;
+      case 'error': return <Error />;
+      default: return <LinkOff />;
     }
-  };
-
-  const getStatusText = (connected, status) => {
-    if (connected) {
-      switch (status) {
-        case 'connected':
-          return '연동됨';
-        case 'error':
-          return '오류';
-        case 'warning':
-          return '주의';
-        default:
-          return '연동됨';
-      }
-    }
-    return '미연동';
-  };
-
-  const getStatusColor = (connected, status) => {
-    if (connected) {
-      switch (status) {
-        case 'connected':
-          return 'success';
-        case 'error':
-          return 'error';
-        case 'warning':
-          return 'warning';
-        default:
-          return 'success';
-      }
-    }
-    return 'default';
   };
 
   if (loading) {
     return (
       <Box className="mobile-container">
-        <OwnerHeader 
-          title="외부 플랫폼 연동"
-          subtitle="로딩 중..."
-          showStoreSelector={true}
-          backPath="/owner/store-management"
-        />
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
           <CircularProgress />
         </Box>
@@ -229,206 +238,161 @@ const ExternalIntegration = () => {
   return (
     <Box className="mobile-container">
       <OwnerHeader 
-        title="외부 플랫폼 연동"
-        subtitle={selectedStore ? `${selectedStore.name} 연동 관리` : '매장을 선택해주세요'}
-        showStoreSelector={true}
-        backPath="/owner/store-management"
+        title="외부 플랫폼 연동" 
+        subtitle={selectedStore?.name || '매장을 선택해주세요'}
+        onBack={() => navigate('/owner')} 
       />
       
       <Box className="content-area">
-        {!selectedStoreId ? (
-          <Card>
-            <CardContent sx={{ textAlign: 'center', py: 4 }}>
-              <Link sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
-              <Typography variant="h6" color="text.secondary">
-                연동을 관리할 매장을 선택해주세요
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                우측 상단에서 매장을 선택할 수 있습니다
-              </Typography>
+        {/* 동기화 버튼 */}
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+          <Button
+            variant="contained"
+            startIcon={syncing ? <CircularProgress size={20} /> : <Sync />}
+            onClick={(e) => setSyncMenuAnchor(e.currentTarget)}
+            disabled={syncing || !selectedStoreId}
+            size="small"
+          >
+            {syncing ? '동기화 중...' : '리뷰 동기화'}
+          </Button>
+        </Box>
+
+        {/* 동기화 메뉴 */}
+        <Menu
+          anchorEl={syncMenuAnchor}
+          open={Boolean(syncMenuAnchor)}
+          onClose={() => setSyncMenuAnchor(null)}
+        >
+          <MenuItem onClick={handleSyncAllReviews}>
+            전체 플랫폼 동기화
+          </MenuItem>
+          {platforms.filter(p => p.connected).map((platform) => (
+            <MenuItem 
+              key={platform.id}
+              onClick={() => handleSyncReviews(platform)}
+            >
+              {platform.name} 동기화
+            </MenuItem>
+          ))}
+        </Menu>
+
+        {/* 플랫폼 목록 */}
+        {platforms.map((platform) => (
+          <Card key={platform.id} sx={{ mb: 2 }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6" sx={{ mr: 1 }}>
+                  {platform.icon}
+                </Typography>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                    {platform.name}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {platform.description}
+                  </Typography>
+                </Box>
+                <Chip
+                  icon={getStatusIcon(platform.status)}
+                  label={platform.connected ? '연동됨' : '연동 안됨'}
+                  color={getStatusColor(platform.status)}
+                  size="small"
+                />
+              </Box>
+
+              {platform.connected && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    리뷰 수: {platform.reviewCount}개
+                  </Typography>
+                  {platform.lastSync && (
+                    <Typography variant="body2" color="text.secondary">
+                      마지막 동기화: {platform.lastSync}
+                    </Typography>
+                  )}
+                </Box>
+              )}
+
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                {platform.connected ? (
+                  <>
+                    <Button
+                      variant="outlined"
+                      startIcon={<Sync />}
+                      onClick={() => handleSyncReviews(platform)}
+                      disabled={syncing}
+                      size="small"
+                    >
+                      동기화
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      startIcon={<LinkOff />}
+                      onClick={() => handleDisconnect(platform.id)}
+                      size="small"
+                    >
+                      연동 해제
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    variant="contained"
+                    startIcon={<Link />}
+                    onClick={() => handleConnect(platform)}
+                    size="small"
+                  >
+                    연동하기
+                  </Button>
+                )}
+              </Box>
             </CardContent>
           </Card>
-        ) : (
-          <Box>
-            {/* 연동 상태 요약 */}
-            <Card sx={{ mb: 2 }}>
-              <CardContent>
-                <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
-                  🔗 연동 현황
-                </Typography>
-                <Grid container spacing={2}>
-                  <Grid item xs={4}>
-                    <Box sx={{ textAlign: 'center' }}>
-                      <Typography variant="h4" color="primary">
-                        {platforms.filter(p => p.connected).length}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        연동된 플랫폼
-                      </Typography>
-                    </Box>
-                  </Grid>
-                  <Grid item xs={4}>
-                    <Box sx={{ textAlign: 'center' }}>
-                      <Typography variant="h4" color="success.main">
-                        {platforms.reduce((sum, p) => sum + p.reviewCount, 0)}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        총 리뷰수
-                      </Typography>
-                    </Box>
-                  </Grid>
-                  <Grid item xs={4}>
-                    <Box sx={{ textAlign: 'center' }}>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={<Sync />}
-                        onClick={handleSyncReviews}
-                        disabled={syncing}
-                        fullWidth
-                      >
-                        {syncing ? '동기화 중...' : '리뷰 동기화'}
-                      </Button>
-                    </Box>
-                  </Grid>
-                </Grid>
-              </CardContent>
-            </Card>
-
-            {/* 플랫폼 목록 */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {platforms.map((platform) => (
-                <Card key={platform.id}>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
-                        <Typography variant="h4">
-                          {platform.icon}
-                        </Typography>
-                        <Box sx={{ flex: 1 }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                              {platform.name}
-                            </Typography>
-                            <Chip 
-                              label={getStatusText(platform.connected, platform.status)}
-                              color={getStatusColor(platform.connected, platform.status)}
-                              size="small"
-                              icon={getStatusIcon(platform.status)}
-                            />
-                          </Box>
-                          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                            {platform.description}
-                          </Typography>
-                          {platform.connected && (
-                            <Box>
-                              <Typography variant="caption" color="text.secondary">
-                                마지막 동기화: {platform.lastSync}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
-                                리뷰 {platform.reviewCount}개
-                              </Typography>
-                            </Box>
-                          )}
-                        </Box>
-                      </Box>
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                        {platform.connected ? (
-                          <Button
-                            size="small"
-                            color="error"
-                            startIcon={<LinkOff />}
-                            onClick={() => handleDisconnect(platform.id)}
-                            disabled={platform.id === 'HIORDER'} // 하이오더는 연동 해제 불가
-                          >
-                            해제
-                          </Button>
-                        ) : (
-                          <Button
-                            size="small"
-                            variant="contained"
-                            startIcon={<Link />}
-                            onClick={() => handleConnect(platform)}
-                          >
-                            연동
-                          </Button>
-                        )}
-                      </Box>
-                    </Box>
-                  </CardContent>
-                </Card>
-              ))}
-            </Box>
-
-            {/* 연동 안내 */}
-            <Card sx={{ mt: 2 }}>
-              <CardContent>
-                <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
-                  💡 연동 안내
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                  • 외부 플랫폼 연동 시 해당 플랫폼의 계정 정보가 필요합니다
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                  • 연동된 플랫폼의 리뷰는 자동으로 수집되어 AI 분석에 활용됩니다
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  • 리뷰 동기화는 하루 1회 자동으로 실행되며, 수동으로도 가능합니다
-                </Typography>
-              </CardContent>
-            </Card>
-          </Box>
-        )}
-
-        {/* 연동 설정 다이얼로그 */}
-        <Dialog 
-          open={connectDialog.open} 
-          onClose={() => setConnectDialog({ open: false, platform: null })}
-          fullWidth
-          maxWidth="sm"
-        >
-          <DialogTitle>
-            {connectDialog.platform?.name} 연동
-          </DialogTitle>
-          <DialogContent>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              {connectDialog.platform?.name} 계정 정보를 입력해주세요.
-            </Typography>
-            <TextField
-              autoFocus
-              margin="dense"
-              label="아이디"
-              fullWidth
-              variant="outlined"
-              value={credentials.username}
-              onChange={(e) => setCredentials(prev => ({ ...prev, username: e.target.value }))}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              margin="dense"
-              label="비밀번호"
-              type="password"
-              fullWidth
-              variant="outlined"
-              value={credentials.password}
-              onChange={(e) => setCredentials(prev => ({ ...prev, password: e.target.value }))}
-            />
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-              * 계정 정보는 암호화되어 안전하게 저장됩니다
-            </Typography>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setConnectDialog({ open: false, platform: null })}>
-              취소
-            </Button>
-            <Button onClick={handleConnectConfirm} variant="contained">
-              연동하기
-            </Button>
-          </DialogActions>
-        </Dialog>
+        ))}
       </Box>
-      
-      <Navigation />
+
+      {/* 연동 다이얼로그 */}
+      <Dialog
+        open={connectDialog.open}
+        onClose={() => setConnectDialog({ open: false, platform: null })}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>
+          {connectDialog.platform?.name} 연동
+        </DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="아이디"
+            fullWidth
+            variant="outlined"
+            value={credentials.username}
+            onChange={(e) => setCredentials({ ...credentials, username: e.target.value })}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            margin="dense"
+            label="비밀번호"
+            type="password"
+            fullWidth
+            variant="outlined"
+            value={credentials.password}
+            onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConnectDialog({ open: false, platform: null })}>
+            취소
+          </Button>
+          <Button onClick={handleConnectConfirm} variant="contained">
+            연동하기
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Navigation activeTab="external" />
     </Box>
   );
 };
