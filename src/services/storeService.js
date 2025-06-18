@@ -92,13 +92,28 @@ export const storeService = {
   getAllTags: async () => {
     try {
       const response = await storeApi.get('/api/stores/tags');
-      console.log('태그 API 응답:', response.data);
-      return response.data;
+      console.log('태그 API 응답 (GET /api/stores/tags):', response.data);
+      
+      // API 응답 구조에 따라 데이터 추출
+      let tags = [];
+      if (response.data && response.data.data && Array.isArray(response.data.data)) {
+        // ApiResponse<List<AllTagResponse>> 구조인 경우
+        tags = response.data.data;
+      } else if (response.data && Array.isArray(response.data)) {
+        // 직접 배열인 경우
+        tags = response.data;
+      } else {
+        console.warn('예상하지 못한 태그 응답 구조:', response.data);
+        tags = [];
+      }
+      
+      return tags;
     } catch (error) {
       console.error('태그 목록 조회 실패:', error);
       throw error;
     }
   },
+
 
   // 인기 태그 조회 (추가됨)
   getTopClickedTags: async () => {
@@ -111,7 +126,7 @@ export const storeService = {
     }
   },
 
-  // 태그 클릭 기록 (추가됨)
+  // 태그 클릭 기록
   recordTagClick: async (tagId) => {
     try {
       const response = await storeApi.post(`/api/stores/tags/${tagId}/click`);

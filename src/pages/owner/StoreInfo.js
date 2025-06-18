@@ -14,18 +14,22 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  Accordion,        // ✅ 추가
+  AccordionSummary, // ✅ 추가
+  AccordionDetails  // ✅ 추가
 } from '@mui/material';
-import { Save, Store } from '@mui/icons-material';
+import { Save, Store, ExpandMore  } from '@mui/icons-material';
 import { storeApi } from '../../services/api';
 import { useSelectedStore } from '../../contexts/SelectedStoreContext';
 import OwnerHeader from '../../components/common/OwnerHeader';
 import Navigation from '../../components/common/Navigation';
+import { storeService } from '../../services/storeService'; // ✅ 추가
 
 
 const StoreInfo = () => {
   const navigate = useNavigate();
-  const { selectedStoreId, selectedStore, refreshStores } = useSelectedStore();
+  const { selectedStoreId, selectedStore, loadStores } = useSelectedStore();
   const [storeInfo, setStoreInfo] = useState({
     name: '',
     description: '',
@@ -42,21 +46,99 @@ const StoreInfo = () => {
   const [imageUploading, setImageUploading] = useState(false);
   const fileInputRef = useRef(null);
 
+    // ✅ 새로 추가할 상태들
+  const [availableTags, setAvailableTags] = useState([]);
+  const [tagsByCategory, setTagsByCategory] = useState({});
+  const [tagsLoading, setTagsLoading] = useState(true);
+
   const categories = [
     '한식', '양식', '일식', '중식', '카페', '디저트', '패스트푸드', '분식', '치킨', '피자'
   ];
 
-  const availableTags = [
-    '비건', '반려동물동반', '혼밥', '저염', '무글루텐', '할랄', '테이크아웃', '배달', '주차가능', '와이파이'
-  ];
 
   useEffect(() => {
     if (selectedStoreId) {
       loadStoreInfo();
+      loadTags(); // ✅ 태그 로드 추가
     } else {
       setLoading(false);
     }
   }, [selectedStoreId]);
+
+    // ✅ 5. 태그 로드 함수 추가 (StoreRegistration.js와 동일)
+  const loadTags = async () => {
+    try {
+      setTagsLoading(true);
+      console.log('태그 목록 로딩 시작...');
+      
+      const tags = await storeService.getAllTags();
+      console.log('처리된 태그 목록:', tags);
+      
+      setAvailableTags(tags);
+      
+      // 카테고리별로 태그 그룹화 (AllTagResponse 구조: {id, tagCategory, tagName})
+      const groupedTags = tags.reduce((acc, tag) => {
+        const category = tag.tagCategory || '기타';
+        if (!acc[category]) {
+          acc[category] = [];
+        }
+        acc[category].push(tag);
+        return acc;
+      }, {});
+      
+      console.log('카테고리별 태그:', groupedTags);
+      setTagsByCategory(groupedTags);
+      
+    } catch (error) {
+      console.error('태그 목록 로드 실패:', error);
+      
+      // 에러 시 기본 태그 사용
+      const defaultTags = [
+        { id: 1, tagCategory: 'FOOD_TYPE', tagName: '한식' },
+        { id: 2, tagCategory: 'FOOD_TYPE', tagName: '양식' },
+        { id: 3, tagCategory: 'FOOD_TYPE', tagName: '일식' },
+        { id: 4, tagCategory: 'FOOD_TYPE', tagName: '중식' },
+        { id: 5, tagCategory: 'HEALTH', tagName: '비건' },
+        { id: 6, tagCategory: 'HEALTH', tagName: '할랄' },
+        { id: 7, tagCategory: 'ATMOSPHERE', tagName: '혼밥' },
+        { id: 8, tagCategory: 'ATMOSPHERE', tagName: '반려동물동반' },
+        { id: 9, tagCategory: 'SERVICE', tagName: '저염' },
+        { id: 10, tagCategory: 'SERVICE', tagName: '무글루텐' },
+        { id: 11, tagCategory: 'SERVICE', tagName: '테이크아웃' },
+        { id: 12, tagCategory: 'SERVICE', tagName: '배달' },
+        { id: 13, tagCategory: 'SERVICE', tagName: '주차가능' },
+        { id: 14, tagCategory: 'SERVICE', tagName: '와이파이' }
+      ];
+      setAvailableTags(defaultTags);
+      
+      const groupedDefaultTags = defaultTags.reduce((acc, tag) => {
+        const category = tag.tagCategory || '기타';
+        if (!acc[category]) {
+          acc[category] = [];
+        }
+        acc[category].push(tag);
+        return acc;
+      }, {});
+      setTagsByCategory(groupedDefaultTags);
+      
+    } finally {
+      setTagsLoading(false);
+    }
+  };
+
+  // ✅ 6. 카테고리 표시명 변환 함수 추가 (StoreRegistration.js와 동일)
+  const getCategoryDisplayName = (category) => {
+    const categoryNames = {
+      'TASTE': '맛',
+      'ATMOSPHERE': '분위기',
+      'ALLERGY': '알러지',
+      'SERVICE': '서비스',
+      'PRICE': '가격대',
+      'FOOD_TYPE': '음식 종류',
+      'HEALTH': '건강 정보'
+    };
+    return categoryNames[category] || category;
+  };
 
   const loadStoreInfo = async () => {
     try {
@@ -80,19 +162,39 @@ const StoreInfo = () => {
     }
   };
 
-  const handleSave = async () => {
-    try {
-      setSaving(true);
-      await storeApi.put(`/api/stores/${selectedStoreId}`, storeInfo);
-      alert('매장 정보가 저장되었습니다.');
-      refreshStores(); // 매장 목록 새로고침
-    } catch (error) {
-      console.error('매장 정보 저장 실패:', error);
-      alert('저장에 실패했습니다.');
-    } finally {
-      setSaving(false);
-    }
-  };
+const handleSave = async () => {
+  try {
+    setSaving(true);
+    
+    // ✅ 백엔드 API 필드명에 맞게 데이터 구조 변경
+    const updateData = {
+      storeName: storeInfo.name,        // ✅ name → storeName
+      address: storeInfo.address,
+      description: storeInfo.description,
+      phone: storeInfo.phone,
+      operatingHours: storeInfo.operatingHours,
+      tags: storeInfo.tags,
+      imageUrl: storeInfo.imageUrl
+    };
+    
+    console.log('매장 수정 요청 데이터:', updateData);
+    
+    await storeApi.put(`/api/stores/${selectedStoreId}`, updateData);
+    alert('매장 정보가 저장되었습니다.');
+    await loadStores();
+    
+  } catch (error) {
+    console.error('매장 정보 저장 실패:', error);
+    console.error('에러 응답:', error.response?.data);
+    
+    // ✅ 더 자세한 에러 메시지 표시
+    const errorMessage = error.response?.data?.message || '저장에 실패했습니다.';
+    alert(`저장 실패: ${errorMessage}`);
+    
+  } finally {
+    setSaving(false);
+  }
+};
 
   const handleInputChange = (field, value) => {
     setStoreInfo(prev => ({
@@ -101,84 +203,97 @@ const StoreInfo = () => {
     }));
   };
 
-  const handleTagToggle = (tag) => {
+  // ✅ 7. handleTagToggle 함수 수정 (AllTagResponse 구조 지원 + 클릭 기록)
+  const handleTagToggle = async (tag) => {
+    // AllTagResponse 구조: { id, tagCategory, tagName } 또는 기존 문자열
+    const tagName = typeof tag === 'string' ? tag : tag.tagName;
+    
     setStoreInfo(prev => ({
       ...prev,
-      tags: prev.tags.includes(tag) 
-        ? prev.tags.filter(t => t !== tag)
-        : [...prev.tags, tag]
+      tags: prev.tags.includes(tagName) 
+        ? prev.tags.filter(t => t !== tagName)
+        : [...prev.tags, tagName]
     }));
+
+    // 태그 클릭 이벤트 기록 (tag 객체이고 id가 있는 경우만)
+    if (typeof tag === 'object' && tag.id) {
+      try {
+        await storeService.recordTagClick(tag.id);
+      } catch (error) {
+        console.warn('태그 클릭 기록 실패:', error);
+      }
+    }
   };
 
   // ✅ 이미지 업로드 함수 추가
-const handleImageUpload = async (event) => {
-  const file = event.target.files[0];
-  if (!file) return;
+  const handleImageUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
 
-  // 파일 유효성 검사
-  if (!file.type.startsWith('image/')) {
-    alert('이미지 파일만 업로드 가능합니다.');
-    return;
-  }
-
-  // 파일 크기 검사 (5MB 제한)
-  if (file.size > 5 * 1024 * 1024) {
-    alert('파일 크기는 5MB 이하여야 합니다.');
-    return;
-  }
-
-  try {
-    setImageUploading(true);
-
-    // FormData 생성
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('type', 'store');
-    formData.append('relatedId', selectedStoreId);
-
-    console.log('🔄 이미지 업로드 시작:', file.name);
-
-    // 이미지 업로드 API 호출
-    const uploadResponse = await storeApi.post('/api/files/images', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-
-    console.log('✅ 이미지 업로드 성공:', uploadResponse.data);
-
-    // 응답에서 이미지 URL 추출
-    const imageUrl = uploadResponse.data.data?.url || uploadResponse.data.url;
-    
-    if (imageUrl) {
-      // storeInfo 상태 업데이트
-      setStoreInfo(prev => ({
-        ...prev,
-        imageUrl: imageUrl
-      }));
-
-      console.log('🖼️ 이미지 URL 업데이트:', imageUrl);
-      alert('이미지가 업로드되었습니다. 저장 버튼을 클릭하여 변경사항을 저장하세요.');
-    } else {
-      throw new Error('이미지 URL을 받지 못했습니다.');
+    // 파일 유효성 검사
+    if (!file.type.startsWith('image/')) {
+      alert('이미지 파일만 업로드 가능합니다.');
+      return;
     }
 
-  } catch (error) {
-    console.error('이미지 업로드 실패:', error);
-    alert('이미지 업로드에 실패했습니다. 다시 시도해주세요.');
-  } finally {
-    setImageUploading(false);
-    // 파일 input 초기화
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+    // 파일 크기 검사 (5MB 제한)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('파일 크기는 5MB 이하여야 합니다.');
+      return;
     }
-  }
-};
 
-// ✅ 이미지 변경 버튼 클릭 핸들러 추가
-const handleImageChangeClick = () => {
-  fileInputRef.current?.click();
-};
+    try {
+      setImageUploading(true);
+
+      // FormData 생성
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('type', 'store');
+      formData.append('relatedId', selectedStoreId);
+
+      console.log('🔄 이미지 업로드 시작:', file.name);
+
+      // 이미지 업로드 API 호출
+      const uploadResponse = await storeApi.post('/api/files/images', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      console.log('✅ 이미지 업로드 성공:', uploadResponse.data);
+
+      // 응답에서 이미지 URL 추출
+      const imageUrl = uploadResponse.data.data?.url || uploadResponse.data.url;
+      
+      if (imageUrl) {
+        // storeInfo 상태 업데이트
+        setStoreInfo(prev => ({
+          ...prev,
+          imageUrl: imageUrl
+        }));
+
+        console.log('🖼️ 이미지 URL 업데이트:', imageUrl);
+        alert('이미지가 업로드되었습니다. 저장 버튼을 클릭하여 변경사항을 저장하세요.');
+      } else {
+        throw new Error('이미지 URL을 받지 못했습니다.');
+      }
+
+    } catch (error) {
+      console.error('이미지 업로드 실패:', error);
+      alert('이미지 업로드에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setImageUploading(false);
+      // 파일 input 초기화
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  // ✅ 이미지 변경 버튼 클릭 핸들러 추가
+  const handleImageChangeClick = () => {
+    fileInputRef.current?.click();
+  };
 
   if (loading) {
     return (
@@ -416,32 +531,84 @@ const handleImageChangeClick = () => {
               </CardContent>
             </Card>
 
-            {/* 태그 설정 */}
+          {/* 태그 섹션 - 수정된 부분 */}
             <Card sx={{ mb: 2 }}>
               <CardContent>
-                <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
-                  🏷️ 매장 특징 태그
+                <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
+                  매장 특징 태그
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  매장의 특징을 나타내는 태그를 선택해주세요 (복수 선택 가능)
+                  매장의 특징을 나타내는 태그를 선택해주세요. (선택된 태그: {storeInfo.tags.length}개)
                 </Typography>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                  {availableTags.map((tag) => (
-                    <Chip
-                      key={tag}
-                      label={tag}
-                      clickable
-                      color={storeInfo.tags.includes(tag) ? 'primary' : 'default'}
-                      variant={storeInfo.tags.includes(tag) ? 'filled' : 'outlined'}
-                      onClick={() => handleTagToggle(tag)}
-                    />
-                  ))}
-                </Box>
+                
+                {tagsLoading ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
+                    <CircularProgress size={24} sx={{ mr: 2 }} />
+                    <Typography>태그 목록을 불러오는 중...</Typography>
+                  </Box>
+                ) : Object.keys(tagsByCategory).length > 0 ? (
+                  // 카테고리별 태그 표시
+                  Object.entries(tagsByCategory).map(([category, tags]) => (
+                    <Accordion key={category} sx={{ mb: 1 }}>
+                      <AccordionSummary expandIcon={<ExpandMore />}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                          {getCategoryDisplayName(category)} ({tags.length}개)
+                        </Typography>
+                      </AccordionSummary>
+                      <AccordionDetails>
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                          {tags.map((tag) => (
+                            <Chip
+                              key={tag.id}
+                              label={tag.tagName}
+                              onClick={() => handleTagToggle(tag)}
+                              variant={storeInfo.tags.includes(tag.tagName) ? 'filled' : 'outlined'}
+                              color={storeInfo.tags.includes(tag.tagName) ? 'primary' : 'default'}
+                              clickable
+                              sx={{
+                                '&:hover': {
+                                  backgroundColor: storeInfo.tags.includes(tag.tagName) ? 'primary.dark' : 'action.hover'
+                                }
+                              }}
+                            />
+                          ))}
+                        </Box>
+                      </AccordionDetails>
+                    </Accordion>
+                  ))
+                ) : (
+                  // 카테고리가 없거나 로딩 실패 시 전체 태그를 한 번에 표시
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {availableTags.map((tag) => (
+                      <Chip
+                        key={tag.id || tag.tagName || tag}
+                        label={tag.tagName || tag}
+                        onClick={() => handleTagToggle(tag)}
+                        variant={storeInfo.tags.includes(tag.tagName || tag) ? 'filled' : 'outlined'}
+                        color={storeInfo.tags.includes(tag.tagName || tag) ? 'primary' : 'default'}
+                        clickable
+                      />
+                    ))}
+                  </Box>
+                )}
+                
+                {/* 선택된 태그 미리보기 */}
                 {storeInfo.tags.length > 0 && (
-                  <Box sx={{ mt: 2 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      선택된 태그: {storeInfo.tags.join(', ')}
+                  <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                    <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                      선택된 태그:
                     </Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                      {storeInfo.tags.map((tagName) => (
+                        <Chip
+                          key={tagName}
+                          label={tagName}
+                          size="small"
+                          color="primary"
+                          onDelete={() => handleTagToggle({ tagName })}
+                        />
+                      ))}
+                    </Box>
                   </Box>
                 )}
               </CardContent>
