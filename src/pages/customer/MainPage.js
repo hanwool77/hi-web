@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box, Typography, Card, CardContent, Avatar, Chip,
   TextField, InputAdornment, Grid, Button
@@ -16,13 +16,14 @@ const MainPage = () => {
   const [selectedTags, setSelectedTags] = useState(['전체']);
   const [userLocation, setUserLocation] = useState(null);
   const [loading, setLoading] = useState(true);
+  const { storeId } = useParams();
 
   const tags = ['전체', '한식', '양식', '일식', '중식', '카페', '디저트', '건강식', '비건', '반려동물'];
 
   useEffect(() => {
     getAllStores();
     getCurrentLocation();
-  }, []);
+  }, [storeId]);
 
   const getCurrentLocation = () => {
     if (navigator.geolocation) {
@@ -134,7 +135,7 @@ const MainPage = () => {
             {stores.map((store) => (
               <Grid item xs={12} key={store.id}>
                 <Card 
-                  onClick={() => handleStoreClick(store.id)}
+                  onClick={() => handleStoreClick(store.storeId)}
                   sx={{ cursor: 'pointer' }}
                 >
                   <CardContent>

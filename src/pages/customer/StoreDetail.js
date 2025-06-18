@@ -71,7 +71,7 @@ const StoreDetail = () => {
         <Box
           component="img"
           sx={{ width: '100%', height: 200, objectFit: 'cover', borderRadius: 1 }}
-          src={store.image || '/images/store-default.jpg'}
+          src={store.imageUrl || '/images/store-default.jpg'}
           alt={store.name}
         />
 
