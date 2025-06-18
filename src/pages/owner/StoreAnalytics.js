@@ -239,6 +239,7 @@ const StoreAnalytics = () => {
         <OwnerHeader 
           title="매장 분석"
           subtitle="데이터 로딩 중..."
+          showBackButton={false}
           showStoreSelector={true}
         />
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
