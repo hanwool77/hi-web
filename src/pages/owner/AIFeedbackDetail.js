@@ -507,49 +507,6 @@ const AIFeedbackDetail = () => {
             </CardContent>
           </Card>
         )}
-
-        {/* 리뷰 통계 요약 */}
-        {reviewAnalysis && (
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
-                리뷰 분석 요약
-              </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={6}>
-                  <Typography variant="body2" color="text.secondary">총 리뷰 수</Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                    {formatNumber(reviewAnalysis.totalReviews)}
-                  </Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="body2" color="text.secondary">평균 평점</Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                    {reviewAnalysis.averageRating ? reviewAnalysis.averageRating.toFixed(1) : '0.0'}
-                  </Typography>
-                </Grid>
-                <Grid item xs={4}>
-                  <Typography variant="body2" color="text.secondary">긍정</Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#4caf50' }}>
-                    {formatNumber(reviewAnalysis.positiveCount)}
-                  </Typography>
-                </Grid>
-                <Grid item xs={4}>
-                  <Typography variant="body2" color="text.secondary">중립</Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#ff9800' }}>
-                    {formatNumber(reviewAnalysis.neutralCount)}
-                  </Typography>
-                </Grid>
-                <Grid item xs={4}>
-                  <Typography variant="body2" color="text.secondary">부정</Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#f44336' }}>
-                    {formatNumber(reviewAnalysis.negativeCount)}
-                  </Typography>
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
-        )}
       </Box>
       
       <OwnerNavigation />

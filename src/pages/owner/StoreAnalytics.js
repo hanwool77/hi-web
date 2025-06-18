@@ -1,4 +1,3 @@
-//* src/pages/owner/StoreAnalytics.js
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
@@ -12,7 +11,11 @@ import {
   Divider,
   CircularProgress,
   Chip,
-  Alert
+  Alert,
+  FormControl,
+  Select,
+  MenuItem,
+  InputLabel
 } from '@mui/material';
 import { 
   Psychology, 
@@ -37,6 +40,8 @@ const StoreAnalytics = () => {
   const [aiFeedbackSummary, setAiFeedbackSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // 리뷰 분석 기간 상태 추가
+  const [reviewAnalysisDays, setReviewAnalysisDays] = useState(30);
 
   const loadAnalyticsData = useCallback(async (storeId) => {
     try {
@@ -47,7 +52,7 @@ const StoreAnalytics = () => {
       
       const [statisticsResponse, reviewResponse, feedbackResponse] = await Promise.allSettled([
         analyticsService.getStoreStatistics(storeId),
-        analyticsService.getReviewAnalysis(storeId),
+        analyticsService.getReviewAnalysis(storeId, 30), // 기본값 30일로 고정
         analyticsService.getAIFeedbackSummary(storeId)
       ]);
 
@@ -78,7 +83,20 @@ const StoreAnalytics = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, []); // 의존성 배열에서 reviewAnalysisDays 제거
+
+  // 리뷰 분석 기간 변경 핸들러
+  const handleReviewPeriodChange = async (event) => {
+    const newDays = event.target.value;
+    setReviewAnalysisDays(newDays);
+    
+    try {
+      const reviewResponse = await analyticsService.getReviewAnalysis(selectedStoreId, newDays);
+      setReviewAnalysis(reviewResponse.data);
+    } catch (error) {
+      console.error('리뷰 분석 기간 변경 실패:', error);
+    }
+  };
 
   // URL 파라미터가 변경되면 selectedStoreId 동기화
   useEffect(() => {
@@ -101,7 +119,7 @@ const StoreAnalytics = () => {
       // 데이터 로드
       loadAnalyticsData(selectedStoreId);
     }
-  }, [selectedStoreId, loadAnalyticsData]); // 의존성 없음
+  }, [selectedStoreId, loadAnalyticsData]);
 
   // AI 피드백 카드 클릭 핸들러
   const handleAIFeedbackClick = () => {
@@ -122,25 +140,29 @@ const StoreAnalytics = () => {
   // 주문 통계 차트 데이터 변환
   const getOrderChartData = () => {
     if (!statistics) return [];
-    
-    // 백엔드에서 받은 실제 데이터 구조에 맞춰 변환
+  
+  // 백엔드에서 받은 실제 데이터 구조에 맞춰 변환
     if (statistics.timeStats) {
       return Object.entries(statistics.timeStats).map(([hour, count]) => ({
         time: `${hour}시`,
         orders: count
       }));
     }
-    
-    // customerAgeDistribution이 있는 경우
+  
+  // customerAgeDistribution이 있는 경우 - 연령대 오름차순 정렬 추가
     if (statistics.customerAgeDistribution) {
-      return Object.entries(statistics.customerAgeDistribution).map(([age, count]) => ({
-        age: `${age}`,
-        count: count
-      }));
+      return Object.entries(statistics.customerAgeDistribution)
+        .map(([age, count]) => ({
+          age: `${age}`,
+          count: count,
+          ageNumber: parseInt(age) // 정렬용 숫자값
+        }))
+        .sort((a, b) => a.ageNumber - b.ageNumber) // 연령대 오름차순 정렬
+        .map(({ age, count }) => ({ age, count })); // ageNumber 제거
     }
-    
+  
     return [];
-  };
+};
 
   // 매출 통계 차트 데이터 변환
   const getRevenueChartData = () => {
@@ -263,6 +285,96 @@ const StoreAnalytics = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* 리뷰 분석 요약 - 새로 추가 */}
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Assessment sx={{ fontSize: 24, color: '#9c27b0', mr: 1 }} />
+                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                  리뷰 분석 요약
+                </Typography>
+              </Box>
+              
+              {/* 기간 선택 드롭다운 */}
+              <FormControl size="small" sx={{ minWidth: 120 }}>
+                <InputLabel>분석 기간</InputLabel>
+                <Select
+                  value={reviewAnalysisDays}
+                  label="분석 기간"
+                  onChange={handleReviewPeriodChange}
+                >
+                  <MenuItem value={1}>1일전</MenuItem>
+                  <MenuItem value={7}>7일전</MenuItem>
+                  <MenuItem value={30}>30일전</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+
+            {reviewAnalysis ? (
+              <Box>
+                {/* 리뷰 통계 */}
+                <Grid container spacing={2} sx={{ mb: 3 }}>
+                  <Grid item xs={4}>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#4caf50' }}>
+                        {reviewAnalysis.positiveReviewCount || 0}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        긍정 리뷰
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={4}>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#ff9800' }}>
+                        {reviewAnalysis.neutralCount || 0}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        중립 리뷰
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={4}>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#f44336' }}>
+                        {reviewAnalysis.negativeReviewCount || 0}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        부정 리뷰
+                      </Typography>
+                    </Box>
+                  </Grid>
+                </Grid>
+
+                {/* 긍정/부정 비율 */}
+                <Grid container spacing={2}>
+                  <Grid item xs={6}>
+                    <Typography variant="body2" color="text.secondary">
+                      긍정 비율
+                    </Typography>
+                    <Typography variant="h6" sx={{ color: '#4caf50', fontWeight: 'bold' }}>
+                      {reviewAnalysis.positiveRate ? `${reviewAnalysis.positiveRate.toFixed(1)}%` : '0%'}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="body2" color="text.secondary">
+                      부정 비율
+                    </Typography>
+                    <Typography variant="h6" sx={{ color: '#f44336', fontWeight: 'bold' }}>
+                      {reviewAnalysis.negativeRate ? `${reviewAnalysis.negativeRate.toFixed(1)}%` : '0%'}
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </Box>
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                리뷰 분석 데이터가 없습니다.
+              </Typography>
+            )}
+          </CardContent>
+        </Card>
 
         {/* 매출 추이 그래프 */}
         {getRevenueChartData().length > 0 && (

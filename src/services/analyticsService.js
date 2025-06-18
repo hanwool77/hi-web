@@ -1,4 +1,3 @@
-//* src/services/analyticsService.js
 import { analyticsApi } from './api';
 import axios from 'axios';
 
@@ -37,9 +36,10 @@ export const analyticsService = {
     return response.data;
   },
 
-  // 리뷰 분석 조회
-  getReviewAnalysis: async (storeId) => {
-    const response = await analyticsApi.get(`/api/analytics/stores/${storeId}/review-analysis`);
+  // 리뷰 분석 조회 - days 파라미터만 추가
+  getReviewAnalysis: async (storeId, days = 30) => {
+    const params = { days };
+    const response = await analyticsApi.get(`/api/analytics/stores/${storeId}/review-analysis`, { params });
     return response.data;
   },
 
