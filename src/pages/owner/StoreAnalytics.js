@@ -338,7 +338,7 @@ const StoreAnalytics = () => {
             {aiFeedbackSummary ? (
               <Box>
                 <Typography variant="body1" sx={{ mb: 2 }}>
-                  {aiFeedbackSummary.summary || '분석 중입니다...'}
+                  {aiFeedbackSummary.keyInsight  || '분석할 데이터가 부족합니다.'}
                 </Typography>
                 
                 {aiFeedbackSummary.sentiment && (

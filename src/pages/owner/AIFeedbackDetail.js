@@ -23,7 +23,6 @@ import {
   Psychology,
   TrendingUp,
   TrendingDown,
-  Star,
   Assessment,
   PlayArrow
 } from '@mui/icons-material';
@@ -37,14 +36,14 @@ const COLORS = ['#00C49F', '#FFBB28', '#FF8042', '#0088FE', '#8884D8'];
 const AIFeedbackDetail = () => {
   const navigate = useNavigate();
   const { selectedStoreId } = useSelectedStore();
-  const { feedbackId } = useParams(); // URL에서 feedbackId 가져오기
+  const { feedbackId } = useParams();
   const [aiFeedback, setAiFeedback] = useState(null);
   const [reviewAnalysis, setReviewAnalysis] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedImprovements, setSelectedImprovements] = useState([]); // 선택된 개선사항들
-  const [actionPlanLoading, setActionPlanLoading] = useState(false); // 실행계획 생성 로딩 상태
-  const [disabledImprovements, setDisabledImprovements] = useState([]); // 비활성화할 개선사항들
+  const [selectedImprovements, setSelectedImprovements] = useState([]);
+  const [actionPlanLoading, setActionPlanLoading] = useState(false);
+  const [disabledImprovements, setDisabledImprovements] = useState([]);
 
   useEffect(() => {
     if (selectedStoreId) {
@@ -123,7 +122,7 @@ const AIFeedbackDetail = () => {
     });
   };
 
-  // 실행계획 생성 API 호출
+  // 실행계획 생성 API 호출 (개선된 버전)
   const handleGenerateActionPlan = async () => {
     // 비활성화된 항목을 제외한 선택된 항목들만 필터링
     const availableSelections = selectedImprovements.filter(
@@ -150,26 +149,48 @@ const AIFeedbackDetail = () => {
     try {
       setActionPlanLoading(true);
       
-      // API 호출 - 비활성화된 항목 제외
-      const response = await analyticsService.generateActionPlans(
-        currentFeedbackId,
-        {
-          actionPlanSelect: availableSelections
-        }
-      );
+      console.log('실행계획 생성 시작... 시간이 다소 소요될 수 있습니다.');
+      
+      // 타임아웃을 60초로 설정하여 API 호출
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60초 타임아웃
+      
+      try {
+        const response = await Promise.race([
+          analyticsService.generateActionPlans(
+            currentFeedbackId,
+            {
+              actionPlanSelect: availableSelections
+            }
+          ),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('요청 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.')), 60000)
+          )
+        ]);
 
-      console.log('실행계획 생성 응답:', response);
-      
-      // 성공 메시지 표시
-      alert('실행계획이 성공적으로 생성되었습니다.');
-      
-      // 새로 선택된 항목들을 비활성화 목록에 추가
-      setDisabledImprovements(prev => [...prev, ...availableSelections]);
+        clearTimeout(timeoutId);
+        console.log('실행계획 생성 응답:', response);
+        
+        // 성공 메시지 표시
+        alert('실행계획이 성공적으로 생성되었습니다.');
+        
+        // 새로 선택된 항목들을 비활성화 목록에 추가
+        setDisabledImprovements(prev => [...prev, ...availableSelections]);
+        
+      } catch (apiError) {
+        clearTimeout(timeoutId);
+        throw apiError;
+      }
       
     } catch (error) {
       console.error('실행계획 생성 실패:', error);
       console.error('에러 상세:', error.response?.data);
-      alert(`실행계획 생성에 실패했습니다: ${error.response?.data?.message || '다시 시도해주세요.'}`);
+      
+      if (error.message === '요청 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.') {
+        alert('실행계획 생성에 시간이 오래 걸리고 있습니다.\n백그라운드에서 계속 처리중이니 잠시 후 페이지를 새로고침해주세요.');
+      } else {
+        alert(`실행계획 생성에 실패했습니다: ${error.response?.data?.message || error.message || '다시 시도해주세요.'}`);
+      }
     } finally {
       setActionPlanLoading(false);
     }
@@ -286,7 +307,7 @@ const AIFeedbackDetail = () => {
           </Card>
         )}
 
-        {/* 긍정적 요소 */}
+        {/* 강점 분석 */}
         {aiFeedback?.positivePoints && aiFeedback.positivePoints.length > 0 && (
           <Card sx={{ mb: 3 }}>
             <CardContent>
@@ -300,8 +321,11 @@ const AIFeedbackDetail = () => {
                 {aiFeedback.positivePoints.map((point, index) => (
                   <ListItem key={index} sx={{ px: 0 }}>
                     <ListItemText 
-                      primary={`✓ ${point}`}
-                      sx={{ '& .MuiListItemText-primary': { color: '#4caf50' } }}
+                      primary={`${index + 1}. ${point}`}
+                      primaryTypographyProps={{
+                        variant: 'body2',
+                        sx: { lineHeight: 1.5 }
+                      }}
                     />
                   </ListItem>
                 ))}
@@ -310,54 +334,64 @@ const AIFeedbackDetail = () => {
           </Card>
         )}
 
-        {/* 개선 사항 */}
-        {aiFeedback?.improvementPoints && aiFeedback.improvementPoints.length > 0 && (
+        {/* 단점 분석 (신규 추가) */}
+        {aiFeedback?.negativePoints && aiFeedback.negativePoints.length > 0 && (
           <Card sx={{ mb: 3 }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <TrendingDown sx={{ fontSize: 24, color: '#f44336', mr: 1 }} />
                 <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                  개선 사항
+                  단점 분석
+                </Typography>
+              </Box>
+              <List dense>
+                {aiFeedback.negativePoints.map((point, index) => (
+                  <ListItem key={index} sx={{ px: 0 }}>
+                    <ListItemText 
+                      primary={`${index + 1}. ${point}`}
+                      primaryTypographyProps={{
+                        variant: 'body2',
+                        sx: { lineHeight: 1.5 }
+                      }}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* 개선사항 */}
+        {aiFeedback?.improvementPoints && aiFeedback.improvementPoints.length > 0 && (
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Assessment sx={{ fontSize: 24, color: '#2196f3', mr: 1 }} />
+                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                  개선사항
                 </Typography>
               </Box>
               
-              {/* 개선사항 목록 - 체크박스와 함께 */}
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                실행계획을 생성할 개선사항을 선택하세요:
+              </Typography>
+
               <Box sx={{ mb: 2 }}>
-                {aiFeedback.improvementPoints.map((point, index) => {
-                  const isDisabled = disabledImprovements.includes(point);
+                {aiFeedback.improvementPoints.map((improvement, index) => {
+                  const isDisabled = disabledImprovements.includes(improvement);
+                  const isSelected = selectedImprovements.includes(improvement);
                   
                   return (
                     <FormControlLabel
                       key={index}
                       control={
                         <Checkbox
-                          checked={selectedImprovements.includes(point)}
-                          onChange={(e) => handleImprovementChange(point, e.target.checked)}
+                          checked={isSelected}
+                          onChange={(e) => handleImprovementChange(improvement, e.target.checked)}
                           disabled={isDisabled}
-                          color="primary"
                         />
                       }
-                      label={
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <Typography 
-                            variant="body2" 
-                            sx={{ 
-                              color: isDisabled ? '#999' : '#f44336',
-                              textDecoration: isDisabled ? 'line-through' : 'none'
-                            }}
-                          >
-                            {point}
-                          </Typography>
-                          {isDisabled && (
-                            <Chip 
-                              label="실행계획 있음" 
-                              size="small" 
-                              color="success" 
-                              sx={{ ml: 1, fontSize: '0.7rem', height: '20px' }}
-                            />
-                          )}
-                        </Box>
-                      }
+                      label={`${index + 1}. ${improvement} ${isDisabled ? '(실행계획 존재)' : ''}`}
                       sx={{ 
                         display: 'block',
                         mb: 1,
@@ -372,18 +406,21 @@ const AIFeedbackDetail = () => {
               <Button
                 variant="contained"
                 color="primary"
-                startIcon={<PlayArrow />}
+                startIcon={actionPlanLoading ? <CircularProgress size={16} color="inherit" /> : <PlayArrow />}
                 onClick={handleGenerateActionPlan}
                 disabled={
                   selectedImprovements.filter(item => !disabledImprovements.includes(item)).length === 0 || 
                   actionPlanLoading ||
-                  (!feedbackId && !aiFeedback?.id && !aiFeedback?.feedbackId) // feedbackId가 없으면 비활성화
+                  (!feedbackId && !aiFeedback?.id && !aiFeedback?.feedbackId)
                 }
                 fullWidth
                 sx={{ mt: 2 }}
               >
                 {actionPlanLoading ? (
-                  <CircularProgress size={20} color="inherit" />
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <span>실행계획 생성 중...</span>
+                    <Typography variant="caption">(최대 60초 소요)</Typography>
+                  </Box>
                 ) : (
                   '실행계획 생성'
                 )}
@@ -401,69 +438,34 @@ const AIFeedbackDetail = () => {
                   {disabledImprovements.length}개 항목은 이미 실행계획이 있습니다
                 </Typography>
               )}
-
-              {/* 디버깅 정보 (개발 중에만 표시) */}
-              {process.env.NODE_ENV === 'development' && (
-                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, textAlign: 'center', display: 'block' }}>
-                  Debug: feedbackId={feedbackId}, aiFeedback.id={aiFeedback?.id}
-                </Typography>
-              )}
             </CardContent>
           </Card>
         )}
 
-        {/* AI 추천 사항 */}
-        {aiFeedback?.recommendations && aiFeedback.recommendations.length > 0 && (
+        {/* 감정 분석 차트 */}
+        {reviewAnalysis && getSentimentChartData().length > 0 && (
           <Card sx={{ mb: 3 }}>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Star sx={{ fontSize: 24, color: '#ff9800', mr: 1 }} />
-                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                  AI 추천 사항
-                </Typography>
-              </Box>
-              <List dense>
-                {aiFeedback.recommendations.map((recommendation, index) => (
-                  <ListItem key={index} sx={{ px: 0 }}>
-                    <ListItemText 
-                      primary={`${index + 1}. ${recommendation}`}
-                      sx={{ '& .MuiListItemText-primary': { color: '#ff9800' } }}
-                    />
-                  </ListItem>
-                ))}
-              </List>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* 감정 분석 결과 차트 */}
-        {getSentimentChartData().length > 0 && (
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Assessment sx={{ fontSize: 24, color: '#2196f3', mr: 1 }} />
-                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                  감정 분석 결과
-                </Typography>
-              </Box>
-              <Box sx={{ height: 250 }}>
+              <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
+                감정 분석 차트
+              </Typography>
+              <Box sx={{ height: 300 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={getSentimentChartData()}
                       cx="50%"
                       cy="50%"
-                      labelLine={false}
-                      label={({ name, percent, value }) => `${name}: ${value}(${(percent * 100).toFixed(1)}%)`}
+                      innerRadius={40}
                       outerRadius={80}
-                      fill="#8884d8"
+                      paddingAngle={5}
                       dataKey="value"
                     >
                       {getSentimentChartData().map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
+                        <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip />
+                    <Tooltip formatter={(value) => [formatNumber(value), '개']} />
                   </PieChart>
                 </ResponsiveContainer>
               </Box>
@@ -472,15 +474,23 @@ const AIFeedbackDetail = () => {
         )}
 
         {/* 키워드 분석 차트 */}
-        {getKeywordChartData().length > 0 && (
+        {reviewAnalysis && getKeywordChartData().length > 0 && (
           <Card sx={{ mb: 3 }}>
             <CardContent>
               <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
-                주요 키워드 분석
+                키워드 분석
               </Typography>
               <Box sx={{ height: 300 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={getKeywordChartData()}>
+                  <BarChart
+                    data={getKeywordChartData()}
+                    margin={{
+                      top: 5,
+                      right: 30,
+                      left: 20,
+                      bottom: 80
+                    }}
+                  >
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis 
                       dataKey="keyword" 

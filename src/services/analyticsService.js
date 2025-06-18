@@ -1,5 +1,6 @@
 //* src/services/analyticsService.js
 import { analyticsApi } from './api';
+import axios from 'axios';
 
 export const analyticsService = {
   // 매장 분석 데이터 조회
@@ -72,9 +73,33 @@ export const analyticsService = {
     return response.data;
   },
 
-  // AI 피드백 기반 실행계획 생성
+  // AI 피드백 기반 실행계획 생성 (긴 타임아웃 설정)
   generateActionPlans: async (feedbackId, request) => {
-    const response = await analyticsApi.post(`/api/analytics/ai-feedback/${feedbackId}/action-plans`, request);
+    // 런타임 설정에서 analytics 서비스 URL 가져오기
+    const getServiceUrl = () => {
+      const config = window.__runtime_config__ || {};
+      if (config.API_GATEWAY_URL) {
+        return config.API_GATEWAY_URL;
+      }
+      return config.ANALYTICS_SERVICE_URL || 'http://20.1.2.3:8084';
+    };
+
+    // 긴 타임아웃을 위한 별도 axios 인스턴스 생성
+    const longTimeoutApi = axios.create({
+      baseURL: getServiceUrl(),
+      timeout: 90000, // 90초 타임아웃
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    // 토큰 추가
+    const token = sessionStorage.getItem('token');
+    if (token) {
+      longTimeoutApi.defaults.headers.Authorization = `Bearer ${token}`;
+    }
+
+    const response = await longTimeoutApi.post(`/api/analytics/ai-feedback/${feedbackId}/action-plans`, request);
     return response.data;
   }
 };
