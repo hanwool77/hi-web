@@ -91,9 +91,15 @@ export const analyticsService = {
     return response.data;
   },
 
-  // 실행 계획 완료 처리 (새로 추가)
+  // 실행 계획 완료 처리
   completeActionPlan: async (planId, request = {}) => {
     const response = await analyticsApi.put(`/api/action-plans/${planId}/complete`, request);
+    return response.data;
+  },
+
+  // 실행 계획 삭제 (신규 추가)
+  deleteActionPlan: async (planId) => {
+    const response = await analyticsApi.delete(`/api/action-plans/${planId}`);
     return response.data;
   },
 

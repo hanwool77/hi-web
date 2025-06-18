@@ -12,9 +12,15 @@ import {
   FormControlLabel,
   Button,
   Divider,
-  Alert
+  Alert,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions
 } from '@mui/material';
-import { ArrowBack, Assignment, CheckCircle } from '@mui/icons-material';
+import { ArrowBack, Assignment, CheckCircle, Delete } from '@mui/icons-material';
 import { analyticsService } from '../../services/analyticsService';
 import { useSelectedStore } from '../../contexts/SelectedStoreContext';
 import OwnerNavigation from '../../components/common/Navigation';
@@ -27,6 +33,8 @@ const ActionPlanList = () => {
   const [selectedPlans, setSelectedPlans] = useState([]); // 선택된 실행계획들
   const [completing, setCompleting] = useState(false); // 완료 처리 로딩 상태
   const [completedPlans, setCompletedPlans] = useState([]); // 이미 완료된 계획들
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, planId: null, planTitle: '' }); // 삭제 확인 다이얼로그
+  const [deleting, setDeleting] = useState(false); // 삭제 처리 로딩 상태
 
   useEffect(() => {
     if (selectedStoreId) {
@@ -71,6 +79,47 @@ const ActionPlanList = () => {
         return prev.filter(id => id !== planId);
       }
     });
+  };
+
+  // 삭제 버튼 클릭 핸들러
+  const handleDeleteClick = (plan) => {
+    setDeleteDialog({
+      open: true,
+      planId: plan.id,
+      planTitle: plan.title
+    });
+  };
+
+  // 삭제 확인 핸들러
+  const handleDeleteConfirm = async () => {
+    try {
+      setDeleting(true);
+      
+      await analyticsService.deleteActionPlan(deleteDialog.planId);
+      
+      alert('실행계획이 삭제되었습니다.');
+      
+      // 삭제된 계획을 목록에서 제거
+      setActionPlans(prev => prev.filter(plan => plan.id !== deleteDialog.planId));
+      
+      // 선택된 계획 목록에서도 제거
+      setSelectedPlans(prev => prev.filter(id => id !== deleteDialog.planId));
+      setCompletedPlans(prev => prev.filter(id => id !== deleteDialog.planId));
+      
+      // 다이얼로그 닫기
+      setDeleteDialog({ open: false, planId: null, planTitle: '' });
+      
+    } catch (error) {
+      console.error('실행계획 삭제 실패:', error);
+      alert('실행계획 삭제에 실패했습니다: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  // 삭제 취소 핸들러
+  const handleDeleteCancel = () => {
+    setDeleteDialog({ open: false, planId: null, planTitle: '' });
   };
 
   // 실행계획 완료 처리
@@ -182,7 +231,7 @@ const ActionPlanList = () => {
             <CardContent sx={{ textAlign: 'center', py: 4 }}>
               <Assignment sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
               <Typography variant="h6" color="text.secondary">
-                등록된 실행 계획이 없습니다
+                저장된 실행 계획이 없습니다
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                 AI 피드백을 통해 실행 계획을 생성해보세요
@@ -192,91 +241,84 @@ const ActionPlanList = () => {
         ) : (
           <>
             {/* 실행 계획 목록 */}
-            {actionPlans.map((plan, index) => {
-              const isCompleted = plan.status === 'COMPLETED';
-              const isChecked = selectedPlans.includes(plan.id);
-              
-              return (
-                <Card key={plan.id} sx={{ mb: 2 }}>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
-                      {/* 체크박스 */}
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            checked={isChecked}
-                            onChange={(e) => handlePlanCheck(plan.id, e.target.checked)}
-                            disabled={isCompleted}
-                            color="primary"
-                          />
-                        }
-                        label=""
-                        sx={{ m: 0, p: 0 }}
-                      />
-                      
-                      {/* 계획 내용 */}
-                      <Box sx={{ flex: 1, opacity: isCompleted ? 0.7 : 1 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                          <Typography 
-                            variant="h6" 
-                            sx={{ 
-                              fontWeight: 'bold',
-                              textDecoration: isCompleted ? 'line-through' : 'none'
-                            }}
-                          >
-                            {plan.title}
-                          </Typography>
+            {actionPlans.map((plan) => (
+              <Card key={plan.id} sx={{ mb: 2 }}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={selectedPlans.includes(plan.id)}
+                          onChange={(e) => handlePlanCheck(plan.id, e.target.checked)}
+                          disabled={completedPlans.includes(plan.id)}
+                        />
+                      }
+                      label=""
+                      sx={{ mr: 1, mt: -1 }}
+                    />
+                    
+                    <Box sx={{ flex: 1 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                          {plan.title}
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Chip 
                             label={getStatusText(plan.status)}
                             color={getStatusColor(plan.status)}
                             size="small"
-                            icon={isCompleted ? <CheckCircle /> : undefined}
                           />
-                        </Box>
-                        
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                          {plan.description}
-                        </Typography>
-                        
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                          <Typography variant="caption" color="text.secondary">
-                            기간: {plan.period || '미정'}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            생성일: {plan.createdAt ? new Date(plan.createdAt).toLocaleDateString('ko-KR') : '미정'}
-                          </Typography>
-                          {plan.completedAt && (
-                            <Typography variant="caption" color="success.main">
-                              완료일: {new Date(plan.completedAt).toLocaleDateString('ko-KR')}
-                            </Typography>
-                          )}
+                          {/* 삭제 버튼 */}
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => handleDeleteClick(plan)}
+                            sx={{ p: 0.5 }}
+                          >
+                            <Delete fontSize="small" />
+                          </IconButton>
                         </Box>
                       </Box>
+                      
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        {plan.description}
+                      </Typography>
+                      
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="caption" color="text.secondary">
+                          기간: {plan.period}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          생성일: {new Date(plan.createdAt).toLocaleDateString('ko-KR')}
+                        </Typography>
+                      </Box>
+                      
+                      {plan.completedAt && (
+                        <Typography variant="caption" color="success.main" sx={{ display: 'block', mt: 1 }}>
+                          완료일: {new Date(plan.completedAt).toLocaleDateString('ko-KR')}
+                        </Typography>
+                      )}
                     </Box>
-                  </CardContent>
-                </Card>
-              );
-            })}
+                  </Box>
+                </CardContent>
+              </Card>
+            ))}
+
+            <Divider sx={{ my: 3 }} />
 
             {/* 완료 처리 버튼 */}
-            <Box sx={{ mt: 3, mb: 3 }}>
+            <Box sx={{ textAlign: 'center' }}>
               <Button
-                fullWidth
                 variant="contained"
-                size="large"
-                startIcon={<CheckCircle />}
+                color="success"
+                startIcon={completing ? <CircularProgress size={20} color="inherit" /> : <CheckCircle />}
                 onClick={handleCompleteActionPlans}
                 disabled={
                   completing || 
                   selectedPlans.filter(planId => !completedPlans.includes(planId)).length === 0
                 }
-                sx={{ 
-                  py: 1.5,
-                  backgroundColor: '#4caf50',
-                  '&:hover': {
-                    backgroundColor: '#45a049'
-                  }
-                }}
+                fullWidth
+                sx={{ mb: 2 }}
               >
                 {completing ? (
                   <>
@@ -305,12 +347,46 @@ const ActionPlanList = () => {
                 💡 <strong>사용 방법:</strong><br />
                 • 완료하고 싶은 실행계획을 체크해주세요<br />
                 • 이미 완료된 항목은 자동으로 체크되어 수정할 수 없습니다<br />
-                • 하단의 완료 버튼을 클릭하면 선택된 계획들이 완료 처리됩니다
+                • 하단의 완료 버튼을 클릭하면 선택된 계획들이 완료 처리됩니다<br />
+                • 우측 상단의 🗑️ 버튼으로 실행계획을 삭제할 수 있습니다
               </Typography>
             </Alert>
           </>
         )}
       </Box>
+
+      {/* 삭제 확인 다이얼로그 */}
+      <Dialog
+        open={deleteDialog.open}
+        onClose={handleDeleteCancel}
+        aria-labelledby="delete-dialog-title"
+        aria-describedby="delete-dialog-description"
+      >
+        <DialogTitle id="delete-dialog-title">
+          실행계획 삭제 확인
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="delete-dialog-description">
+            <strong>"{deleteDialog.planTitle}"</strong> 실행계획을 정말 삭제하시겠습니까?
+            <br />
+            삭제된 실행계획은 복구할 수 없습니다.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDeleteCancel} disabled={deleting}>
+            취소
+          </Button>
+          <Button 
+            onClick={handleDeleteConfirm} 
+            color="error" 
+            variant="contained"
+            disabled={deleting}
+            startIcon={deleting ? <CircularProgress size={16} color="inherit" /> : null}
+          >
+            {deleting ? '삭제 중...' : '삭제'}
+          </Button>
+        </DialogActions>
+      </Dialog>
       
       <OwnerNavigation />
     </Box>
