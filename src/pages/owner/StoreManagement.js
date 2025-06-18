@@ -50,27 +50,37 @@ const StoreManagement = () => {
 
   const loadStoreInfo = async () => {
     try {
-      setLoading(true);
-      console.log('매장 정보 로드 시작:', selectedStoreId);
-      
-      const response = await storeService.getStoreInfo(selectedStoreId);
-      console.log('매장 정보 API 응답:', response);
-      
-      // API 응답 구조에 따라 데이터 추출
-      let storeData = null;
-      if (response && response.success && response.data) {
-        storeData = response.data;
-      } else if (response && response.storeId) {
-        // 직접 매장 데이터가 온 경우
-        storeData = response;
-      } else {
-        console.error('예상하지 못한 API 응답 구조:', response);
-        throw new Error('매장 정보를 찾을 수 없습니다.');
-      }
-      
-      setStore(storeData);
-      setImageError(false); // 새로운 매장 데이터 로드 시 이미지 에러 초기화
-      console.log('매장 정보 설정 완료:', storeData);
+    setLoading(true);
+    console.log('매장 정보 로드 시작:', selectedStoreId);
+    
+    const response = await storeService.getStoreDetail(selectedStoreId);
+    console.log('🔍 매장 정보 API 전체 응답:', response);
+    
+    // ✅ 응답 구조를 더 정확하게 파싱
+    let storeData = null;
+    
+    if (response && response.success && response.data) {
+      // ApiResponse<StoreDetailResponse> 구조
+      storeData = response.data;
+      console.log('✅ ApiResponse 구조로 파싱:', storeData);
+    } else if (response && response.storeId) {
+      // StoreDetailResponse 직접 반환 구조
+      storeData = response;
+      console.log('✅ 직접 응답 구조로 파싱:', storeData);
+    } else if (response && response.data && response.data.storeId) {
+      // 중첩된 data 구조
+      storeData = response.data;
+      console.log('✅ 중첩 data 구조로 파싱:', storeData);
+    } else {
+      console.error('❌ 예상하지 못한 API 응답 구조:', response);
+      console.error('❌ response.success:', response?.success);
+      console.error('❌ response.data:', response?.data);
+      console.error('❌ response.storeId:', response?.storeId);
+      throw new Error('매장 정보를 찾을 수 없습니다.');
+    }
+        
+    setStore(storeData);
+    setImageError(false);
       
     } catch (error) {
       console.error('매장 정보 로드 실패:', error);

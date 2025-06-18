@@ -43,8 +43,29 @@ export const storeService = {
 
   // 매장 상세 조회
   getStoreDetail: async (storeId) => {
-    const response = await storeApi.get(`/api/stores/${storeId}`);
-    return response.data;
+    try {
+      console.log('🌐 API 호출 시작:', `/api/stores/${storeId}`);
+      
+      const response = await storeApi.get(`/api/stores/${storeId}`);
+      
+      console.log('🌐 원시 HTTP 응답:', response);
+      console.log('🌐 응답 데이터:', response.data);
+      console.log('🌐 응답 상태:', response.status);
+      console.log('🌐 응답 헤더:', response.headers);
+      
+      // imageUrl 특별 확인
+      if (response.data && response.data.data) {
+        console.log('🖼️ imageUrl in response.data.data:', response.data.data.imageUrl);
+      }
+      if (response.data) {
+        console.log('🖼️ imageUrl in response.data:', response.data.imageUrl);
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('API 호출 실패:', error);
+      throw error;
+    }
   },
 
   // 매장 수정
