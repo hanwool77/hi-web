@@ -135,5 +135,10 @@ export const storeService = {
       console.error('태그 클릭 기록 실패:', error);
       throw error;
     }
-  }
+  },
+
+  getAllStores: async () => {
+    const response = await storeApi.get('/api/stores/stores/all');
+    return response.data;
+  },
 };

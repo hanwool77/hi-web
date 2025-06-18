@@ -6,6 +6,7 @@ import {
 } from '@mui/material';
 import { Search, LocationOn, Star } from '@mui/icons-material';
 import { recommendService } from '../../services/recommendService';
+import { storeService } from '../../services/storeService';
 import Navigation from '../../components/common/Navigation';
 
 const MainPage = () => {
@@ -19,7 +20,7 @@ const MainPage = () => {
   const tags = ['한식', '양식', '일식', '중식', '카페', '디저트', '건강식', '비건', '반려동물'];
 
   useEffect(() => {
-    loadRecommendedStores();
+    getAllStores();
     getCurrentLocation();
   }, []);
 
@@ -39,10 +40,10 @@ const MainPage = () => {
     }
   };
 
-  const loadRecommendedStores = async () => {
+  const getAllStores = async () => {
     try {
       setLoading(true);
-      const response = await recommendService.getPopularStores();
+      const response = await storeService.getAllStores();
       setStores(response.data || []);
     } catch (error) {
       console.error('매장 목록 로드 실패:', error);
@@ -139,7 +140,7 @@ const MainPage = () => {
                   <CardContent>
                     <Box sx={{ display: 'flex', gap: 2 }}>
                       <Avatar
-                        src={store.image || '/images/store-default.jpg'}
+                        src={store.imageUrl || '/images/store-default.jpg'}
                         sx={{ width: 60, height: 60 }}
                       />
                       <Box sx={{ flex: 1 }}>
