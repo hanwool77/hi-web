@@ -138,7 +138,7 @@ const ReviewManagement = () => {
       // 기존 댓글이 있으면 수정, 없으면 새로 작성
       if (replyDialog.review.ownerCommentId) {
         // 댓글 수정
-        await reviewService.updateComment(reviewId, replyDialog.review.ownerCommentId, replyText);
+        await reviewService.createComment(reviewId, replyText);
       } else {
         // 댓글 작성
         await reviewService.createComment(reviewId, replyText);
