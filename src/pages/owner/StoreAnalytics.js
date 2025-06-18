@@ -476,7 +476,7 @@ const StoreAnalytics = () => {
             {aiFeedbackSummary && aiFeedbackSummary.hasData ? (
               <Box>
                 <Typography variant="body2" sx={{ mb: 2 }}>
-                  {aiFeedbackSummary.summary || 'AI 분석 결과가 준비되었습니다.'}
+                  {aiFeedbackSummary.keyInsight || '분석할 리뷰수가 부족합니다.'}
                 </Typography>
                 <Button 
                   variant="outlined" 
