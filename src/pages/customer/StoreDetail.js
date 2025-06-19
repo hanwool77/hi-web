@@ -5,10 +5,11 @@ import {
   Box, Typography, Card, CardContent, Button, Chip, Tab, Tabs,
   Avatar, Grid, Rating
 } from '@mui/material';
-import { ArrowBack, Star, Edit, Message } from '@mui/icons-material';
+import { ArrowBack, Star, Edit, Message, Store as StoreIcon } from '@mui/icons-material';
 import { storeService } from '../../services/storeService';
 import { reviewService } from '../../services/reviewService';
 import { storeApi } from '../../services/api'; // API 직접 import 추가
+import { analyticsApi } from '../../services/api'; // Analytics API import 추가
 import Navigation from '../../components/common/Navigation';
 
 const StoreDetail = () => {
@@ -17,15 +18,47 @@ const StoreDetail = () => {
   const [store, setStore] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [menus, setMenus] = useState([]); // 메뉴 상태 추가
+  const [aiSummary, setAiSummary] = useState(null); // AI 요약 상태 추가
   const [tabValue, setTabValue] = useState(0);
   const [loading, setLoading] = useState(true);
   const [menuLoading, setMenuLoading] = useState(false); // 메뉴 로딩 상태 추가
+  const [aiSummaryLoading, setAiSummaryLoading] = useState(false); // AI 요약 로딩 상태 추가
+  const [imageError, setImageError] = useState(false); // 이미지 에러 상태 추가
 
   useEffect(() => {
     loadStoreData();
   }, [storeId]);
 
-  // 메뉴 데이터 로드 함수
+  // AI 요약 데이터 로드 함수
+  const loadAiSummary = async (storeId) => {
+    try {
+      setAiSummaryLoading(true);
+      console.log('AI 요약 정보 로드 시작:', storeId);
+      
+      // Analytics API를 사용해서 AI 요약 조회
+      const response = await analyticsApi.get(`/api/analytics/stores/${storeId}/customer/summary`);
+      console.log('AI 요약 API 응답:', response.data);
+      
+      // 응답 구조에 따른 AI 요약 데이터 추출
+      let summaryData = null;
+      if (response.data && response.data.success && response.data.data) {
+        summaryData = response.data.data;
+      } else if (response.data && response.data.data) {
+        summaryData = response.data.data;
+      } else if (response.data) {
+        summaryData = response.data;
+      }
+      
+      console.log('처리된 AI 요약 데이터:', summaryData);
+      setAiSummary(summaryData);
+      
+    } catch (error) {
+      console.error('AI 요약 로드 실패:', error);
+      setAiSummary(null);
+    } finally {
+      setAiSummaryLoading(false);
+    }
+  };
   const loadStoreMenus = async (storeId) => {
     try {
       setMenuLoading(true);
@@ -128,6 +161,9 @@ const StoreDetail = () => {
       // 5. 메뉴 데이터 로드
       await loadStoreMenus(storeId);
       
+      // 6. AI 요약 데이터 로드
+      await loadAiSummary(storeId);
+      
     } catch (error) {
       console.error('매장 정보 또는 리뷰 로드 실패:', error);
       
@@ -160,6 +196,10 @@ const StoreDetail = () => {
     setTabValue(newValue);
   };
 
+  const handleImageError = () => {
+    setImageError(true);
+  };
+
   if (loading || !store) {
     return (
       <Box className="mobile-container">
@@ -184,68 +224,70 @@ const StoreDetail = () => {
       </Box>
 
       <Box className="content-area">
-        {/* 매장 기본 정보 */}
+        {/* 매장 기본 정보 카드 - StoreManagement 스타일 적용 */}
         <Card sx={{ mb: 2 }}>
           <CardContent>
-            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-              <Avatar
-                src={store.imageUrl || '/images/store-default.jpg'}
-                sx={{ width: 80, height: 80 }}
+            {/* 매장 이미지 - StoreManagement 스타일 */}
+            {store.imageUrl && !imageError ? (
+              <Box
+                component="img"
+                sx={{
+                  width: '100%',
+                  height: 150,
+                  objectFit: 'cover',
+                  borderRadius: 1,
+                  mb: 2
+                }}
+                src={store.imageUrl}
+                alt={store.storeName || store.name}
+                onError={handleImageError}
               />
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                  {store.storeName || store.name}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                  {store.category} • {store.address}
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <Star sx={{ color: '#ffc107', fontSize: 18 }} />
-                  <Typography variant="body2" sx={{ ml: 0.5, fontWeight: 'bold' }}>
-                    {store.rating ? store.rating.toFixed(1) : '0.0'}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ ml: 0.5 }}>
-                    ({formatNumber(store.reviewCount)} 리뷰)
-                  </Typography>
-                </Box>
-                
-                {/* 매장 태그 표시 */}
-                {store.tags && store.tags.length > 0 && (
-                  <Box sx={{ mt: 1 }}>
-                    {store.tags.slice(0, 4).map((tag, index) => (
-                      <Chip 
-                        key={index} 
-                        label={tag} 
-                        size="small" 
-                        sx={{ 
-                          mr: 0.5, 
-                          mb: 0.5,
-                          fontSize: '0.75rem',
-                          height: '22px'
-                        }} 
-                        variant="outlined"
-                        color="primary"
-                      />
-                    ))}
-                    {store.tags.length > 4 && (
-                      <Chip 
-                        label={`+${store.tags.length - 4}`} 
-                        size="small" 
-                        sx={{ 
-                          mr: 0.5, 
-                          mb: 0.5,
-                          fontSize: '0.75rem',
-                          height: '22px'
-                        }} 
-                        variant="outlined"
-                        color="default"
-                      />
-                    )}
-                  </Box>
-                )}
+            ) : (
+              <Box
+                sx={{
+                  width: '100%',
+                  height: 150,
+                  bgcolor: 'grey.200',
+                  borderRadius: 1,
+                  mb: 2,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <StoreIcon sx={{ fontSize: 48, color: 'grey.500' }} />
               </Box>
-            </Box>
+            )}
 
+            {/* 매장 기본 정보 - StoreManagement 스타일 */}
+            <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>
+              {store.storeName || store.name}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              📍 {store.address}
+            </Typography>
+            {store.phone && (
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                📞 {store.phone}
+              </Typography>
+            )}
+            {store.operatingHours && (
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                🕒 {store.operatingHours}
+              </Typography>
+            )}
+
+            {/* 평점 및 리뷰 정보 */}
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <Star sx={{ color: '#ffc107', fontSize: 18 }} />
+              <Typography variant="body2" sx={{ ml: 0.5, fontWeight: 'bold' }}>
+                {store.rating ? store.rating.toFixed(1) : '0.0'}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ ml: 0.5 }}>
+                ({formatNumber(store.reviewCount)} 리뷰)
+              </Typography>
+            </Box>
+            
             {/* 매장 설명 */}
             {store.description && (
               <Typography variant="body2" sx={{ mb: 2 }}>
@@ -253,28 +295,80 @@ const StoreDetail = () => {
               </Typography>
             )}
 
-            {/* 운영시간 */}
-            {store.operatingHours && (
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                  운영시간
+            {/* 매장 태그 표시 */}
+            {store.tags && store.tags.length > 0 && (
+              <Box>
+                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                  🏷️ 매장 태그
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {store.operatingHours}
-                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  {store.tags.slice(0, 6).map((tag, index) => (
+                    <Chip 
+                      key={index} 
+                      label={tag} 
+                      size="small" 
+                      variant="outlined"
+                      color="primary"
+                      sx={{ fontSize: '0.75rem', height: '24px' }}
+                    />
+                  ))}
+                  {store.tags.length > 6 && (
+                    <Chip 
+                      label={`+${store.tags.length - 6}`} 
+                      size="small" 
+                      variant="outlined"
+                      color="default"
+                      sx={{ fontSize: '0.75rem', height: '24px' }}
+                    />
+                  )}
+                </Box>
               </Box>
             )}
+          </CardContent>
+        </Card>
 
-            {/* 연락처 */}
-            {store.phone && (
-              <Box>
-                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                  연락처
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {store.phone}
+        {/* AI 매장 요약 카드 */}
+        <Card sx={{ mb: 2 }}>
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                width: 32,
+                height: 32,
+                borderRadius: '50%',
+                bgcolor: 'primary.main',
+                mr: 1
+              }}>
+                <Typography variant="body2" sx={{ color: 'white', fontWeight: 'bold' }}>
+                  AI
                 </Typography>
               </Box>
+              <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                AI 매장 요약
+              </Typography>
+            </Box>
+            
+            {aiSummaryLoading ? (
+              <Typography variant="body2" color="text.secondary">
+                AI가 매장을 분석하고 있습니다...
+              </Typography>
+            ) : aiSummary && aiSummary.positiveSummary ? (
+              <Typography variant="body2" sx={{ 
+                lineHeight: 1.6,
+                bgcolor: '#f8f9fa',
+                p: 2,
+                borderRadius: 1,
+                borderLeft: '4px solid',
+                borderLeftColor: 'primary.main'
+              }}>
+                {aiSummary.positiveSummary}
+              </Typography>
+            ) : (
+              <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                아직 AI 분석 결과가 없습니다. 리뷰가 충분히 쌓이면 AI가 매장을 요약해드려요.
+              </Typography>
             )}
           </CardContent>
         </Card>
