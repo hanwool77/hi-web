@@ -22,8 +22,14 @@ const MainPage = () => {
   const tags = ['전체', '한식', '양식', '일식', '중식', '카페'];
 
   useEffect(() => {
-    getAllStores();
-  }, [storeId]);
+    // 컴포넌트 마운트시 전체 매장 로드
+    loadStoresByTags(['전체']);
+  }, []); // 빈 의존성 배열로 초기 로드만
+
+  useEffect(() => {
+    // selectedTags 변경시 매장 목록 재로드 (초기 로드 제외)
+    loadStoresByTags(selectedTags);
+  }, [selectedTags]); // selectedTags 변경시 매장 목록 재로드
 
   // 리뷰 데이터를 포함한 매장 정보 계산 함수
   const calculateStoreReviewStats = (reviews) => {
@@ -180,10 +186,151 @@ const MainPage = () => {
   };
 
   const handleTagClick = (tag) => {
+    console.log('🏷️ 태그 클릭됨:', tag);
+    console.log('🏷️ 현재 선택된 태그들:', selectedTags);
+    
+    let newTags;
+    
     if (selectedTags.includes(tag)) {
-      setSelectedTags(selectedTags.filter(t => t !== tag));
+      // 이미 선택된 태그를 클릭한 경우 제거
+      newTags = selectedTags.filter(t => t !== tag);
+      if (newTags.length === 0) {
+        newTags = ['전체']; // 태그가 모두 제거되면 '전체'로 설정
+      }
+      console.log('🏷️ 태그 제거됨, 새로운 태그들:', newTags);
     } else {
-      setSelectedTags([...selectedTags, tag]);
+      // 새로운 태그 선택
+      if (tag === '전체') {
+        newTags = ['전체'];
+        console.log('🏷️ 전체 태그 선택됨');
+      } else {
+        // '전체'가 선택되어 있으면 제거하고 새 태그 추가
+        newTags = selectedTags.includes('전체') 
+          ? [tag] 
+          : [...selectedTags.filter(t => t !== '전체'), tag];
+        console.log('🏷️ 새 태그 추가됨, 새로운 태그들:', newTags);
+      }
+    }
+    
+    setSelectedTags(newTags);
+  };
+
+  // 선택된 태그에 따라 매장 목록을 필터링하거나 API 호출
+  const loadStoresByTags = async (tags) => {
+    try {
+      setLoading(true);
+      console.log('🏷️ loadStoresByTags 호출됨, 선택된 태그들:', tags);
+      
+      if (tags.includes('전체') || tags.length === 0) {
+        // '전체' 선택시 모든 매장 조회
+        console.log('📋 전체 매장 조회 시작');
+        await getAllStores();
+      } else {
+        // 특정 태그 선택시 카테고리별 매장 조회
+        console.log('🔍 카테고리별 매장 조회 시작:', tags);
+        await getStoresByCategory(tags);
+      }
+    } catch (error) {
+      console.error('❌ 매장 목록 로드 실패:', error);
+      setStores([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 카테고리별 매장 조회 함수
+  const getStoresByCategory = async (categories) => {
+    try {
+      console.log('🔍 getStoresByCategory 시작, 카테고리들:', categories);
+      const allStoresWithReviews = [];
+      
+      // 각 카테고리별로 API 호출
+      for (const category of categories) {
+        console.log(`📡 카테고리 "${category}" 매장 조회 API 호출 중...`);
+        
+        try {
+          const response = await storeService.getStoresByCategory(category);
+          console.log(`✅ 카테고리 "${category}" API 응답:`, response);
+          
+          const storeList = response.data || response || [];
+          console.log(`📋 카테고리 "${category}" 매장 목록 (${storeList.length}개):`, storeList);
+          
+          if (storeList.length === 0) {
+            console.log(`⚠️ 카테고리 "${category}"에 매장이 없습니다.`);
+            continue;
+          }
+          
+          // 각 매장의 리뷰 데이터를 가져와서 평점과 리뷰 수 계산
+          const storesWithReviewData = await Promise.all(
+            storeList.map(async (store) => {
+              try {
+                console.log(`🔄 매장 ${store.storeId || store.id} 리뷰 데이터 로드 중...`);
+                
+                // 매장별 리뷰 데이터 가져오기
+                const reviewResponse = await reviewService.getStoreReviews(store.storeId || store.id);
+                
+                // 응답 구조에 따른 리뷰 데이터 추출
+                let reviewData = [];
+                if (reviewResponse && Array.isArray(reviewResponse)) {
+                  reviewData = reviewResponse;
+                } else if (reviewResponse && reviewResponse.data && Array.isArray(reviewResponse.data)) {
+                  reviewData = reviewResponse.data;
+                } else if (reviewResponse && reviewResponse.success && Array.isArray(reviewResponse.data)) {
+                  reviewData = reviewResponse.data;
+                }
+
+                // 활성 상태의 리뷰만 필터링
+                const activeReviews = reviewData.filter(review => 
+                  review.status !== 'DELETED' && review.status !== 'HIDDEN'
+                );
+
+                // 리뷰 통계 계산
+                const reviewStats = calculateStoreReviewStats(activeReviews);
+                
+                // tagJson 파싱
+                const parsedTags = parseTagJson(store.tagJson, store.storeId || store.id);
+                
+                return {
+                  ...store,
+                  rating: reviewStats.rating,
+                  reviewCount: reviewStats.reviewCount,
+                  tags: parsedTags, // 파싱된 태그 추가
+                  reviews: activeReviews // 필요시 전체 리뷰 데이터도 포함
+                };
+              } catch (error) {
+                console.error(`❌ 매장 ${store.storeId || store.id} 리뷰 로드 실패:`, error);
+                // 리뷰 로드 실패시 기본값 사용
+                return {
+                  ...store,
+                  rating: store.rating || 0,
+                  reviewCount: store.reviewCount || 0,
+                  tags: parseTagJson(store.tagJson, store.storeId || store.id) // 오류시에도 태그 파싱 시도
+                };
+              }
+            })
+          );
+          
+          allStoresWithReviews.push(...storesWithReviewData);
+          console.log(`✅ 카테고리 "${category}" 매장 ${storesWithReviewData.length}개 처리 완료`);
+          
+        } catch (categoryError) {
+          console.error(`❌ 카테고리 "${category}" API 호출 실패:`, categoryError);
+          // 해당 카테고리만 실패해도 다른 카테고리는 계속 진행
+          continue;
+        }
+      }
+      
+      // 중복 제거 (storeId 기준)
+      const uniqueStores = allStoresWithReviews.filter((store, index, self) => 
+        index === self.findIndex(s => (s.storeId || s.id) === (store.storeId || store.id))
+      );
+      
+      console.log(`🎯 최종 카테고리별 매장 목록 (${uniqueStores.length}개):`, uniqueStores);
+      setStores(uniqueStores);
+      
+    } catch (error) {
+      console.error('❌ 카테고리별 매장 목록 로드 실패:', error);
+      setStores([]);
     }
   };
 

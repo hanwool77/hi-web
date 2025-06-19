@@ -141,4 +141,17 @@ export const storeService = {
     const response = await storeApi.get('/api/stores/stores/all');
     return response.data;
   },
+
+  getStoresByCategory: async (category) => {
+    try {
+      console.log('카테고리별 매장 조회 API 호출:', category);
+      const response = await storeApi.get(`/api/stores/stores/category/${encodeURIComponent(category)}`);
+      console.log(`카테고리 "${category}" API 응답:`, response.data);
+      return response.data;
+    } catch (error) {
+      console.error(`카테고리 "${category}" 매장 조회 실패:`, error);
+      throw error;
+    }
+  },
+  
 };
