@@ -19,7 +19,7 @@ const MainPage = () => {
   const [loading, setLoading] = useState(true);
   const { storeId } = useParams();
 
-  const tags = ['전체', '한식', '양식', '일식', '중식', '카페', '디저트', '건강식', '비건', '반려동물'];
+  const tags = ['전체', '한식', '양식', '일식', '중식', '카페'];
 
   useEffect(() => {
     getAllStores();
