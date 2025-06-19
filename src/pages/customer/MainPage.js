@@ -40,6 +40,77 @@ const MainPage = () => {
     };
   };
 
+  // tagJson을 파싱하여 태그 배열로 변환하는 함수
+  const parseTagJson = (tagJson, storeId = null) => {
+    console.log(`[매장 ${storeId}] tagJson 원본:`, tagJson, typeof tagJson);
+    
+    if (!tagJson) {
+      console.log(`[매장 ${storeId}] tagJson이 없음`);
+      return [];
+    }
+    
+    try {
+      let tags = tagJson;
+      
+      // tagJson이 문자열인 경우
+      if (typeof tagJson === 'string') {
+        const trimmed = tagJson.trim();
+        console.log(`[매장 ${storeId}] 문자열 tagJson:`, trimmed);
+        
+        // JSON 형태인지 확인 (대괄호나 중괄호로 시작)
+        if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+          console.log(`[매장 ${storeId}] JSON 형태로 파싱 시도`);
+          tags = JSON.parse(trimmed);
+        } else {
+          // 단순 문자열인 경우 쉼표로 분리하거나 단일 태그로 처리
+          console.log(`[매장 ${storeId}] 단순 문자열로 처리`);
+          if (trimmed.includes(',')) {
+            // 쉼표로 구분된 태그들
+            tags = trimmed.split(',').map(tag => tag.trim()).filter(tag => tag);
+          } else {
+            // 단일 태그
+            tags = [trimmed];
+          }
+        }
+      }
+      
+      console.log(`[매장 ${storeId}] 파싱된 tags:`, tags, typeof tags);
+      
+      // 배열인지 확인
+      if (Array.isArray(tags)) {
+        console.log(`[매장 ${storeId}] 배열 형태 태그:`, tags);
+        return tags.filter(tag => tag && String(tag).trim()); // 빈 태그 제거
+      }
+      
+      // 객체인 경우 값들을 배열로 변환
+      if (typeof tags === 'object' && tags !== null) {
+        console.log(`[매장 ${storeId}] 객체 형태 태그, Object.values() 적용`);
+        const result = Object.values(tags).flat().filter(tag => tag && String(tag).trim());
+        console.log(`[매장 ${storeId}] 객체에서 추출된 태그:`, result);
+        return result;
+      }
+      
+      // 기타 타입인 경우 문자열로 변환하여 배열에 담기
+      if (tags) {
+        console.log(`[매장 ${storeId}] 기타 타입을 문자열로 변환:`, tags);
+        return [String(tags).trim()];
+      }
+      
+      console.log(`[매장 ${storeId}] 처리할 수 없는 태그 형태:`, typeof tags, tags);
+      return [];
+    } catch (error) {
+      console.error(`[매장 ${storeId}] tagJson 파싱 오류:`, error, tagJson);
+      
+      // 파싱 오류시 문자열 자체를 태그로 사용
+      if (typeof tagJson === 'string' && tagJson.trim()) {
+        console.log(`[매장 ${storeId}] 오류 발생, 원본 문자열을 태그로 사용:`, tagJson.trim());
+        return [tagJson.trim()];
+      }
+      
+      return [];
+    }
+  };
+
   const getAllStores = async () => {
     try {
       setLoading(true);
@@ -71,10 +142,15 @@ const MainPage = () => {
             // 리뷰 통계 계산
             const reviewStats = calculateStoreReviewStats(activeReviews);
             
+            // tagJson 파싱
+            const parsedTags = parseTagJson(store.tagJson, store.storeId || store.id);
+            console.log(`매장 ${store.storeId || store.id} 최종 태그:`, parsedTags);
+            
             return {
               ...store,
               rating: reviewStats.rating,
               reviewCount: reviewStats.reviewCount,
+              tags: parsedTags, // 파싱된 태그 추가
               reviews: activeReviews // 필요시 전체 리뷰 데이터도 포함
             };
           } catch (error) {
@@ -83,7 +159,8 @@ const MainPage = () => {
             return {
               ...store,
               rating: store.rating || 0,
-              reviewCount: store.reviewCount || 0
+              reviewCount: store.reviewCount || 0,
+              tags: parseTagJson(store.tagJson, store.storeId || store.id) // 오류시에도 태그 파싱 시도
             };
           }
         })
@@ -198,11 +275,39 @@ const MainPage = () => {
                             {store.rating ? store.rating.toFixed(1) : '0.0'} ({formatNumber(store.reviewCount || 0)})
                           </Typography>
                         </Box>
-                        {store.tags && (
+                        
+                        {/* 매장 태그 표시 */}
+                        {store.tags && store.tags.length > 0 && (
                           <Box sx={{ mt: 1 }}>
                             {store.tags.slice(0, 3).map((tag, index) => (
-                              <Chip key={index} label={tag} size="small" sx={{ mr: 0.5 }} />
+                              <Chip 
+                                key={index} 
+                                label={tag} 
+                                size="small" 
+                                sx={{ 
+                                  mr: 0.5, 
+                                  mb: 0.5,
+                                  fontSize: '0.7rem',
+                                  height: '20px'
+                                }} 
+                                variant="outlined"
+                                color="primary"
+                              />
                             ))}
+                            {store.tags.length > 3 && (
+                              <Chip 
+                                label={`+${store.tags.length - 3}`} 
+                                size="small" 
+                                sx={{ 
+                                  mr: 0.5, 
+                                  mb: 0.5,
+                                  fontSize: '0.7rem',
+                                  height: '20px'
+                                }} 
+                                variant="outlined"
+                                color="default"
+                              />
+                            )}
                           </Box>
                         )}
                       </Box>
