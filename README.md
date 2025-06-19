@@ -123,8 +123,7 @@ hiorder-feedback-system/
 
 1. **저장소 클론**
 ```bash
-git clone https://github.com/your-org/hiorder-feedback-system.git
-cd hiorder-feedback-system/backend
+git clone https://github.com/dg04-hi/hi-backend.git
 ```
 
 2. **환경변수 설정**
@@ -170,24 +169,16 @@ docker-compose up -d postgres redis
 
 ### 프론트엔드 실행
 
-1. **프론트엔드 디렉토리로 이동**
+1. **저장소 클론**
 ```bash
-cd ../frontend
+git clone https://github.com/dg04-hi/hi-backend.git
 ```
 
 2. **의존성 설치**
 ```bash
-npm install
+npm install react-scripts
 ```
-
-3. **환경변수 설정**
-```bash
-# .env 파일 생성
-echo "REACT_APP_API_BASE_URL=http://localhost:8080/api" > .env
-echo "REACT_APP_AUTH_URL=http://localhost:8080/api/auth" >> .env
-```
-
-4. **개발 서버 실행**
+3. **개발 서버 실행**
 ```bash
 npm start
 ```
@@ -321,4 +312,12 @@ POST /api/action-plans                        # 실행계획 저장
 ## 👥 팀 소개
 
 ### 개발팀
-<img width="611" alt="Image" src="https://github.com/user-attachments/assets/93d764a0-b84e-4010-a314-486969c42b1d" />
+- PO - 덕이
+- 스크럼마스터 - 행누
+- ui/ux 기획자 - 우리, 행누, 덕이
+- 컨텐츠 기획자 - 우리, 행누, 덕이
+- 프론트앤드 개발자 - 우리, 행누, 덕이
+- 백앤드 개발자 - 메롱, 무민, 해달
+- CI/CD - 메롱, 무민, 해달
+- TA - 메롱, 무민, 해달
+- QA - 우리, 행누, 해달
