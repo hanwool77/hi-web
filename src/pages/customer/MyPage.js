@@ -26,13 +26,13 @@ const MyPage = () => {
       icon: <Person />,
       title: '프로필 수정',
       description: '닉네임, 개인정보 변경',
-      onClick: () => navigate('/profile')
+      onClick: () => navigate('/customer/profile')
     },
     {
       icon: <Settings />,
       title: '취향 설정',
       description: '음식 취향 및 선호도 설정',
-      onClick: () => navigate('/preferences')
+      onClick: () => navigate('/customer/preferences')
     }
   ];
 

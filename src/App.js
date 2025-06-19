@@ -35,6 +35,7 @@ import OwnerMyPage from './pages/owner/OwnerMyPage';
 // Customer Pages  
 import MainPage from './pages/customer/MainPage';
 import StoreDetail from './pages/customer/StoreDetail';
+import Profile from './pages/customer/Profile';
 // import CustomerMyPage from './pages/customer/CustomerMyPage'; // 파일이 존재하지 않음
 import PreferenceSettings from './pages/customer/PreferenceSettings';
 import MyPage from './pages/customer/MyPage';
@@ -92,6 +93,11 @@ function App() {
               <Route path="/customer/mypage" element={
                 <ProtectedRoute requiredRole="USER">
                   <MyPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/customer/profile" element={
+                <ProtectedRoute requiredRole="USER">
+                  <Profile />
                 </ProtectedRoute>
               } />
               <Route path="/customer/store/:storeId" element={
