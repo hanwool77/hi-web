@@ -360,81 +360,15 @@ POST /api/action-plans                        # 실행계획 저장
 
 ## 🧪 테스트
 
-### 단위 테스트 실행
-```bash
-./gradlew test
-```
-
-### 통합 테스트 실행
-```bash
-./gradlew integrationTest
-```
-
 ### API 테스트
-```bash
-# Postman Collection 실행
-newman run docs/api/hiorder-api-tests.postman_collection.json
-```
-
-### 성능 테스트
-```bash
-# K6 성능 테스트
-k6 run tests/performance/load-test.js
-```
+- api doc 사용하여 테스트 진행.
 
 ## 🔒 보안
 
 ### 인증 및 권한
 - JWT 토큰 기반 인증
-- Azure AD B2C 통합
-- Role-based Access Control (RBAC)
-- API Rate Limiting
 
-### 데이터 보호
-- TLS 1.3 암호화 통신
-- 개인정보 마스킹 처리
-- 데이터베이스 암호화
-- 정기적 보안 스캔
 
-## 📈 모니터링 및 로깅
-
-### 메트릭 수집
-- **Application Metrics**: Spring Boot Actuator
-- **Infrastructure Metrics**: Azure Monitor
-- **Custom Metrics**: Micrometer + Prometheus
-
-### 로그 관리
-- **Structured Logging**: Logback + JSON
-- **Log Aggregation**: Azure Log Analytics
-- **Distributed Tracing**: Azure Application Insights
-
-### 알림 설정
-- **Error Rate**: > 5%
-- **Response Time**: > 2s
-- **CPU Usage**: > 80%
-- **Memory Usage**: > 85%
-
-## 🤝 기여 가이드
-
-### 개발 프로세스
-1. **이슈 생성**: GitHub Issues에서 버그 리포트 또는 기능 요청
-2. **브랜치 생성**: `feature/기능명` 또는 `bugfix/이슈번호`
-3. **코드 작성**: 코딩 컨벤션 준수
-4. **테스트 작성**: 단위 테스트 및 통합 테스트
-5. **Pull Request**: 코드 리뷰 요청
-6. **배포**: 승인 후 develop → staging → main 순서로 배포
-
-### 코딩 컨벤션
-- **Java**: Google Java Style Guide
-- **JavaScript**: ESLint + Prettier
-- **Git Commit**: Conventional Commits
-
-### 코드 리뷰 체크리스트
-- [ ] 비즈니스 로직이 올바르게 구현되었는가?
-- [ ] 테스트 커버리지가 80% 이상인가?
-- [ ] 보안 취약점이 없는가?
-- [ ] 성능에 문제가 없는가?
-- [ ] 문서가 업데이트되었는가?
 
 ## 📝 라이선스
 
@@ -444,12 +378,6 @@ k6 run tests/performance/load-test.js
 
 ### 개발팀
 <img width="611" alt="Image" src="https://github.com/user-attachments/assets/93d764a0-b84e-4010-a314-486969c42b1d" />
-
-## 📞 문의 및 지원
-
-- **GitHub Issues**: [이슈 등록](https://github.com/your-org/hiorder-feedback-system/issues)
-- **이메일**: hiorder-support@ktds.com
-- **문서**: [프로젝트 위키](https://github.com/your-org/hiorder-feedback-system/wiki)
 
 ---
 
