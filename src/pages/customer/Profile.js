@@ -82,7 +82,7 @@ const Profile = () => {
   return (
     <Box className="mobile-container">
       <Box sx={{ p: 2, bgcolor: '#2c3e50', color: 'white', display: 'flex', alignItems: 'center' }}>
-        <ArrowBack sx={{ mr: 1, cursor: 'pointer' }} onClick={() => navigate('/mypage')} />
+        <ArrowBack sx={{ mr: 1, cursor: 'pointer' }} onClick={() => navigate('/customer/mypage')} />
         <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
           프로필 수정
         </Typography>
