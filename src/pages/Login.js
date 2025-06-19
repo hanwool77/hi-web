@@ -102,7 +102,7 @@ const Login = () => {
       }}>
         <Paper elevation={3} sx={{ p: 4, width: '100%', maxWidth: 400 }}>
           <Typography variant="h4" component="h1" sx={{ mb: 3, textAlign: 'center', fontWeight: 'bold' }}>
-            하이오더
+            하이소피
           </Typography>
           
           {error && (

@@ -343,7 +343,7 @@ const MainPage = () => {
       {/* 헤더 */}
       <Box sx={{ p: 2, bgcolor: '#2c3e50', color: 'white' }}>
         <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>
-          🍽️ 하이오더
+          🍽️ 하이소피
         </Typography>
         <Typography variant="body2" sx={{ opacity: 0.9 }}>
           맛있는 식당을 찾아보세요
