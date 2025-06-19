@@ -23,10 +23,16 @@ const MyPage = () => {
 
   const menuItems = [
     {
+      icon: <Assignment />,
+      title: '내 리뷰',
+      description: '작성한 리뷰 확인 및 관리',
+      onClick: () => navigate('/customer/my-reviews')
+    },
+    {
       icon: <Person />,
       title: '프로필 수정',
       description: '닉네임, 개인정보 변경',
-      onClick: () => navigate('/customer/profile')
+      onClick: () => navigate('/customer/profile-edit')
     },
     {
       icon: <Settings />,
