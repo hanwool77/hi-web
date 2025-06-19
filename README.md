@@ -1,4 +1,4 @@
-# 하이오더 리뷰 피드백 시스템 🍽️
+# 리뷰 기반 AI 피드백 시스템 🍽️
 
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.0-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://openjdk.java.net/)
@@ -33,6 +33,9 @@
 ### 마이크로서비스 구조
 ![image](image/마이크로서비스아키텍쳐.png)
 
+### CI/CD 파이프라인
+
+![iamge2](image/CICD_파이프라인.png)
 
 ### 기술 스택
 
