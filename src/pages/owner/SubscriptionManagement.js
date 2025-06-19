@@ -1,4 +1,4 @@
-//* src/pages/owner/SubscriptionManagement.js - 완전한 구독 관리 페이지
+//* src/pages/owner/SubscriptionManagement.js - 배포환경 안전 버전
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -113,6 +113,47 @@ const SubscriptionManagement = () => {
     loadSubscriptionData();
   }, []);
 
+  // 🛡️ 안전한 가격 포맷팅 함수
+  const formatPrice = (price) => {
+    try {
+      // null, undefined, NaN 체크
+      if (price === null || price === undefined || isNaN(price)) {
+        return '0';
+      }
+      
+      // 숫자로 변환 후 포맷팅
+      const numPrice = Number(price);
+      if (isNaN(numPrice)) {
+        return '0';
+      }
+      
+      return numPrice.toLocaleString('ko-KR');
+    } catch (error) {
+      console.error('formatPrice 에러:', error);
+      return '0';
+    }
+  };
+
+  // 🛡️ 안전한 날짜 포맷팅 함수
+  const formatDate = (dateString) => {
+    try {
+      if (!dateString || dateString === '' || dateString === null || dateString === undefined) {
+        return '-';
+      }
+      
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return '-';
+      }
+      
+      return date.toLocaleDateString('ko-KR');
+    } catch (error) {
+      console.error('formatDate 에러:', error);
+      return '-';
+    }
+  };
+
+  // 🛡️ 안전한 데이터 로딩 함수
   const loadSubscriptionData = async () => {
     try {
       setLoading(true);
@@ -125,9 +166,27 @@ const SubscriptionManagement = () => {
           subscriptionService.getPaymentHistory()
         ]);
         
-        setCurrentPlan(subscriptionResponse.data);
-        setPlans(plansResponse.data || []);
-        setPaymentHistory(paymentResponse.data || []);
+        // 🛡️ API 응답 데이터 안전 처리
+        const currentPlanData = subscriptionResponse?.data || sampleCurrentPlan;
+        const plansData = plansResponse?.data || samplePlans;
+        const paymentData = paymentResponse?.data || samplePaymentHistory;
+        
+        // 🛡️ 필수 필드 기본값 설정
+        setCurrentPlan({
+          id: currentPlanData.id || 1,
+          planName: currentPlanData.planName || "기본 플랜",
+          planId: currentPlanData.planId || 1,
+          status: currentPlanData.status || "ACTIVE",
+          startDate: currentPlanData.startDate || new Date().toISOString().split('T')[0],
+          expiryDate: currentPlanData.expiryDate || new Date().toISOString().split('T')[0],
+          price: currentPlanData.price || 0,
+          nextBillingDate: currentPlanData.nextBillingDate || new Date().toISOString().split('T')[0],
+          autoRenewal: currentPlanData.autoRenewal !== undefined ? currentPlanData.autoRenewal : true
+        });
+        
+        setPlans(Array.isArray(plansData) ? plansData : samplePlans);
+        setPaymentHistory(Array.isArray(paymentData) ? paymentData : samplePaymentHistory);
+        
       } catch (apiError) {
         console.log('API 호출 실패, 샘플 데이터 사용:', apiError);
         // 샘플 데이터 사용
@@ -146,6 +205,7 @@ const SubscriptionManagement = () => {
     }
   };
 
+  // 🛡️ 안전한 플랜 변경 함수
   const handleChangePlan = async (planId) => {
     if (window.confirm('구독 플랜을 변경하시겠습니까?')) {
       try {
@@ -158,14 +218,17 @@ const SubscriptionManagement = () => {
         } catch (apiError) {
           // API 실패 시 샘플 동작
           console.log('API 호출 실패, 샘플 동작:', apiError);
-          const selectedPlan = plans.find(p => p.id === planId);
-          setCurrentPlan(prev => ({
-            ...prev,
-            planName: selectedPlan.name,
-            planId: planId,
-            price: selectedPlan.price
-          }));
-          alert('구독 플랜이 변경되었습니다.');
+          const selectedPlan = plans.find(p => p?.id === planId) || plans[0];
+          
+          if (selectedPlan) {
+            setCurrentPlan(prev => ({
+              ...prev,
+              planName: selectedPlan.name || "기본 플랜",
+              planId: planId || 1,
+              price: selectedPlan.price || 0
+            }));
+            alert('구독 플랜이 변경되었습니다.');
+          }
         }
       } catch (error) {
         console.error('구독 플랜 변경 실패:', error);
@@ -176,6 +239,7 @@ const SubscriptionManagement = () => {
     }
   };
 
+  // 🛡️ 안전한 구독 취소 함수
   const handleCancelSubscription = async () => {
     if (window.confirm('정말로 구독을 취소하시겠습니까? 취소 후에는 서비스 이용이 제한됩니다.')) {
       try {
@@ -203,6 +267,7 @@ const SubscriptionManagement = () => {
     }
   };
 
+  // 🛡️ 안전한 구독 갱신 함수
   const handleRenewSubscription = async () => {
     try {
       setActionLoading(true);
@@ -228,14 +293,34 @@ const SubscriptionManagement = () => {
     }
   };
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('ko-KR');
+  // 🛡️ 안전한 상태 확인 함수
+  const getStatusColor = (status) => {
+    try {
+      switch (status?.toUpperCase()) {
+        case 'ACTIVE': return 'success';
+        case 'CANCELLED': return 'error';
+        case 'EXPIRED': return 'warning';
+        default: return 'default';
+      }
+    } catch (error) {
+      return 'default';
+    }
   };
 
-  const formatPrice = (price) => {
-    return price.toLocaleString('ko-KR');
+  const getStatusLabel = (status) => {
+    try {
+      switch (status?.toUpperCase()) {
+        case 'ACTIVE': return '활성';
+        case 'CANCELLED': return '취소됨';
+        case 'EXPIRED': return '만료됨';
+        default: return '알 수 없음';
+      }
+    } catch (error) {
+      return '알 수 없음';
+    }
   };
 
+  // 🛡️ 로딩 상태 처리
   if (loading) {
     return (
       <Box className="mobile-container">
@@ -250,6 +335,11 @@ const SubscriptionManagement = () => {
       </Box>
     );
   }
+
+  // 🛡️ 데이터 안전성 최종 체크
+  const safePlan = currentPlan || sampleCurrentPlan;
+  const safePlans = Array.isArray(plans) && plans.length > 0 ? plans : samplePlans;
+  const safePaymentHistory = Array.isArray(paymentHistory) && paymentHistory.length > 0 ? paymentHistory : samplePaymentHistory;
 
   return (
     <Box className="mobile-container">
@@ -301,109 +391,74 @@ const SubscriptionManagement = () => {
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                   <Box>
                     <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-                      {currentPlan?.planName}
+                      {safePlan?.planName || '기본 플랜'}
                     </Typography>
                     <Typography variant="h6" sx={{ color: '#2196f3', fontWeight: 'bold' }}>
-                      월 {formatPrice(currentPlan?.price)}원
+                      월 {formatPrice(safePlan?.price)}원
                     </Typography>
                   </Box>
                   <Chip 
-                    label={currentPlan?.status === 'ACTIVE' ? '활성' : currentPlan?.status === 'CANCELLED' ? '취소됨' : '비활성'} 
-                    color={currentPlan?.status === 'ACTIVE' ? 'success' : currentPlan?.status === 'CANCELLED' ? 'error' : 'default'}
-                    icon={currentPlan?.status === 'ACTIVE' ? <CheckCircle /> : <Warning />}
+                    label={getStatusLabel(safePlan?.status)}
+                    color={getStatusColor(safePlan?.status)}
+                    icon={safePlan?.status === 'ACTIVE' ? <CheckCircle /> : <Cancel />}
                   />
                 </Box>
-
+                
                 <Divider sx={{ my: 2 }} />
-
+                
                 <List dense>
                   <ListItem>
-                    <ListItemIcon><Info sx={{ color: 'text.secondary' }} /></ListItemIcon>
+                    <ListItemIcon><Info /></ListItemIcon>
                     <ListItemText 
                       primary="구독 시작일" 
-                      secondary={formatDate(currentPlan?.startDate)} 
+                      secondary={formatDate(safePlan?.startDate)} 
                     />
                   </ListItem>
                   <ListItem>
-                    <ListItemIcon><Info sx={{ color: 'text.secondary' }} /></ListItemIcon>
+                    <ListItemIcon><Info /></ListItemIcon>
                     <ListItemText 
                       primary="만료일" 
-                      secondary={formatDate(currentPlan?.expiryDate)} 
+                      secondary={formatDate(safePlan?.expiryDate)} 
                     />
                   </ListItem>
-                  {currentPlan?.nextBillingDate && (
-                    <ListItem>
-                      <ListItemIcon><Payment sx={{ color: 'text.secondary' }} /></ListItemIcon>
-                      <ListItemText 
-                        primary="다음 결제일" 
-                        secondary={formatDate(currentPlan?.nextBillingDate)} 
-                      />
-                    </ListItem>
-                  )}
                   <ListItem>
-                    <ListItemIcon><Refresh sx={{ color: 'text.secondary' }} /></ListItemIcon>
+                    <ListItemIcon><Payment /></ListItemIcon>
+                    <ListItemText 
+                      primary="다음 결제일" 
+                      secondary={formatDate(safePlan?.nextBillingDate)} 
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemIcon><Refresh /></ListItemIcon>
                     <ListItemText 
                       primary="자동 갱신" 
-                      secondary={currentPlan?.autoRenewal ? '활성화' : '비활성화'} 
+                      secondary={safePlan?.autoRenewal ? '활성화' : '비활성화'} 
                     />
                   </ListItem>
                 </List>
-              </CardContent>
-            </Card>
-
-            {/* 구독 관리 액션 */}
-            <Card>
-              <CardContent>
-                <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
-                  구독 관리
-                </Typography>
                 
-                <Grid container spacing={2}>
-                  {currentPlan?.status === 'ACTIVE' && (
-                    <>
-                      <Grid item xs={12}>
-                        <Button
-                          fullWidth
-                          variant="outlined"
-                          startIcon={<Refresh />}
-                          onClick={handleRenewSubscription}
-                          disabled={actionLoading}
-                        >
-                          구독 갱신
-                        </Button>
-                      </Grid>
-                      <Grid item xs={12}>
-                        <Button
-                          fullWidth
-                          variant="outlined"
-                          color="error"
-                          startIcon={<Cancel />}
-                          onClick={handleCancelSubscription}
-                          disabled={actionLoading}
-                        >
-                          구독 취소
-                        </Button>
-                      </Grid>
-                    </>
+                <Box sx={{ mt: 3, display: 'flex', gap: 1 }}>
+                  {safePlan?.status === 'ACTIVE' && (
+                    <Button 
+                      variant="outlined" 
+                      color="error" 
+                      onClick={handleCancelSubscription}
+                      disabled={actionLoading}
+                    >
+                      구독 취소
+                    </Button>
                   )}
-                  
-                  {currentPlan?.status === 'CANCELLED' && (
-                    <Grid item xs={12}>
-                      <Alert severity="warning" sx={{ mb: 2 }}>
-                        구독이 취소되었습니다. 서비스 이용이 제한됩니다.
-                      </Alert>
-                      <Button
-                        fullWidth
-                        variant="contained"
-                        startIcon={<Refresh />}
-                        onClick={handleRenewSubscription}
-                        disabled={actionLoading}
-                      >
-                        구독 재개
-                      </Button>
-                    </Grid>
+                  {safePlan?.status === 'CANCELLED' && (
+                    <Button 
+                      variant="contained" 
+                      color="primary" 
+                      onClick={handleRenewSubscription}
+                      disabled={actionLoading}
+                    >
+                      구독 재시작
+                    </Button>
                   )}
-                </Grid>
+                </Box>
               </CardContent>
             </Card>
           </Box>
@@ -412,64 +467,53 @@ const SubscriptionManagement = () => {
         {/* 플랜 변경 탭 */}
         {tabValue === 1 && (
           <Box>
-            <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
-              구독 플랜 선택
-            </Typography>
-            
             <Grid container spacing={2}>
-              {plans.map((plan) => (
-                <Grid item xs={12} key={plan.id}>
+              {safePlans.map((plan) => (
+                <Grid item xs={12} key={plan?.id || Math.random()}>
                   <Card sx={{ 
-                    border: currentPlan?.planId === plan.id ? '2px solid #2196f3' : '1px solid #e0e0e0',
-                    position: 'relative'
+                    position: 'relative',
+                    border: plan?.popular ? '2px solid #2196f3' : '1px solid #e0e0e0'
                   }}>
-                    {plan.popular && (
+                    {plan?.popular && (
                       <Chip 
                         label="인기" 
                         color="primary" 
-                        size="small" 
-                        sx={{ 
-                          position: 'absolute', 
-                          top: 8, 
-                          right: 8,
-                          zIndex: 1
-                        }} 
+                        size="small"
+                        sx={{ position: 'absolute', top: 10, right: 10 }}
                       />
                     )}
                     <CardContent>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                        <Box>
-                          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                            {plan.name}
-                          </Typography>
-                          <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#2196f3' }}>
-                            {formatPrice(plan.price)}원
-                            <Typography component="span" variant="body2" color="text.secondary">
-                              /월
-                            </Typography>
-                          </Typography>
-                        </Box>
-                        {currentPlan?.planId === plan.id && (
-                          <Chip label="현재 플랜" color="primary" size="small" />
-                        )}
-                      </Box>
+                      <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>
+                        {plan?.name || '플랜'}
+                      </Typography>
+                      <Typography variant="h5" sx={{ color: '#2196f3', fontWeight: 'bold', mb: 2 }}>
+                        월 {formatPrice(plan?.price)}원
+                      </Typography>
                       
-                      <Box sx={{ mb: 2 }}>
-                        {plan.features?.map((feature, index) => (
-                          <Typography key={index} variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                            • {feature}
-                          </Typography>
-                        ))}
-                      </Box>
+                      <Typography variant="body2" sx={{ mb: 2, whiteSpace: 'pre-line' }}>
+                        {plan?.description || '플랜 설명'}
+                      </Typography>
                       
-                      <Button
-                        fullWidth
-                        variant={currentPlan?.planId === plan.id ? "outlined" : "contained"}
-                        startIcon={<CreditCard />}
-                        onClick={() => handleChangePlan(plan.id)}
-                        disabled={currentPlan?.planId === plan.id || actionLoading}
+                      {plan?.features && Array.isArray(plan.features) && (
+                        <List dense sx={{ mb: 2 }}>
+                          {plan.features.map((feature, index) => (
+                            <ListItem key={index} sx={{ py: 0.5 }}>
+                              <ListItemIcon sx={{ minWidth: 30 }}>
+                                <CheckCircle sx={{ fontSize: 16, color: '#4caf50' }} />
+                              </ListItemIcon>
+                              <ListItemText primary={feature} />
+                            </ListItem>
+                          ))}
+                        </List>
+                      )}
+                      
+                      <Button 
+                        fullWidth 
+                        variant={safePlan?.planId === plan?.id ? "outlined" : "contained"}
+                        disabled={safePlan?.planId === plan?.id || actionLoading}
+                        onClick={() => handleChangePlan(plan?.id)}
                       >
-                        {currentPlan?.planId === plan.id ? '현재 플랜' : '플랜 변경'}
+                        {safePlan?.planId === plan?.id ? '현재 플랜' : '이 플랜 선택'}
                       </Button>
                     </CardContent>
                   </Card>
@@ -482,56 +526,51 @@ const SubscriptionManagement = () => {
         {/* 결제 내역 탭 */}
         {tabValue === 2 && (
           <Box>
-            <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
+            <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
               결제 내역
             </Typography>
             
-            {paymentHistory.length === 0 ? (
+            {safePaymentHistory.length > 0 ? (
+              <List>
+                {safePaymentHistory.map((payment, index) => (
+                  <React.Fragment key={payment?.id || index}>
+                    <ListItem>
+                      <ListItemIcon>
+                        <Receipt sx={{ color: '#2196f3' }} />
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                              {payment?.planName || '플랜'}
+                            </Typography>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                              {formatPrice(payment?.amount)}원
+                            </Typography>
+                          </Box>
+                        }
+                        secondary={
+                          <Box sx={{ mt: 0.5 }}>
+                            <Typography variant="body2" color="text.secondary">
+                              {formatDate(payment?.date)} • {payment?.method || '결제수단'} • {payment?.status || '상태'}
+                            </Typography>
+                          </Box>
+                        }
+                      />
+                    </ListItem>
+                    {index < safePaymentHistory.length - 1 && <Divider />}
+                  </React.Fragment>
+                ))}
+              </List>
+            ) : (
               <Card>
                 <CardContent sx={{ textAlign: 'center', py: 4 }}>
-                  <Receipt sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
-                  <Typography variant="h6" color="text.secondary">
-                    결제 내역이 없습니다
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                    구독을 시작하면 결제 내역이 표시됩니다
+                  <Warning sx={{ fontSize: 48, color: '#999', mb: 2 }} />
+                  <Typography variant="body1" color="text.secondary">
+                    결제 내역이 없습니다.
                   </Typography>
                 </CardContent>
               </Card>
-            ) : (
-              <Grid container spacing={2}>
-                {paymentHistory.map((payment) => (
-                  <Grid item xs={12} key={payment.id}>
-                    <Card>
-                      <CardContent>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                          <Box>
-                            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                              {payment.planName}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              {formatDate(payment.date)}
-                            </Typography>
-                          </Box>
-                          <Box sx={{ textAlign: 'right' }}>
-                            <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#2196f3' }}>
-                              {formatPrice(payment.amount)}원
-                            </Typography>
-                            <Chip 
-                              label={payment.status} 
-                              color={payment.status === '완료' ? 'success' : 'default'}
-                              size="small"
-                            />
-                          </Box>
-                        </Box>
-                        <Typography variant="body2" color="text.secondary">
-                          결제 수단: {payment.method}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                ))}
-              </Grid>
             )}
           </Box>
         )}
