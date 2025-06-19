@@ -1,12 +1,14 @@
+//* src/pages/customer/MainPage.js
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box, Typography, Card, CardContent, Avatar, Chip,
   TextField, InputAdornment, Grid, Button
 } from '@mui/material';
-import { Search, LocationOn, Star } from '@mui/icons-material';
+import { Search, Star } from '@mui/icons-material';
 import { recommendService } from '../../services/recommendService';
 import { storeService } from '../../services/storeService';
+import { reviewService } from '../../services/reviewService'; // 추가
 import Navigation from '../../components/common/Navigation';
 
 const MainPage = () => {
@@ -14,7 +16,6 @@ const MainPage = () => {
   const [stores, setStores] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTags, setSelectedTags] = useState(['전체']);
-  const [userLocation, setUserLocation] = useState(null);
   const [loading, setLoading] = useState(true);
   const { storeId } = useParams();
 
@@ -22,30 +23,73 @@ const MainPage = () => {
 
   useEffect(() => {
     getAllStores();
-    getCurrentLocation();
   }, [storeId]);
 
-  const getCurrentLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserLocation({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude
-          });
-        },
-        (error) => {
-          console.error('위치 정보를 가져올 수 없습니다:', error);
-        }
-      );
+  // 리뷰 데이터를 포함한 매장 정보 계산 함수
+  const calculateStoreReviewStats = (reviews) => {
+    if (!reviews || reviews.length === 0) {
+      return { rating: 0, reviewCount: 0 };
     }
+
+    const totalRating = reviews.reduce((sum, review) => sum + (review.rating || 0), 0);
+    const averageRating = totalRating / reviews.length;
+    
+    return {
+      rating: averageRating,
+      reviewCount: reviews.length
+    };
   };
 
   const getAllStores = async () => {
     try {
       setLoading(true);
       const response = await storeService.getAllStores();
-      setStores(response.data || []);
+      const storeList = response.data || [];
+      
+      // 각 매장의 리뷰 데이터를 가져와서 평점과 리뷰 수 계산
+      const storesWithReviewData = await Promise.all(
+        storeList.map(async (store) => {
+          try {
+            // 매장별 리뷰 데이터 가져오기
+            const reviewResponse = await reviewService.getStoreReviews(store.storeId || store.id);
+            
+            // 응답 구조에 따른 리뷰 데이터 추출
+            let reviewData = [];
+            if (reviewResponse && Array.isArray(reviewResponse)) {
+              reviewData = reviewResponse;
+            } else if (reviewResponse && reviewResponse.data && Array.isArray(reviewResponse.data)) {
+              reviewData = reviewResponse.data;
+            } else if (reviewResponse && reviewResponse.success && Array.isArray(reviewResponse.data)) {
+              reviewData = reviewResponse.data;
+            }
+
+            // 활성 상태의 리뷰만 필터링
+            const activeReviews = reviewData.filter(review => 
+              review.status !== 'DELETED' && review.status !== 'HIDDEN'
+            );
+
+            // 리뷰 통계 계산
+            const reviewStats = calculateStoreReviewStats(activeReviews);
+            
+            return {
+              ...store,
+              rating: reviewStats.rating,
+              reviewCount: reviewStats.reviewCount,
+              reviews: activeReviews // 필요시 전체 리뷰 데이터도 포함
+            };
+          } catch (error) {
+            console.error(`매장 ${store.storeId || store.id} 리뷰 로드 실패:`, error);
+            // 리뷰 로드 실패시 기본값 사용
+            return {
+              ...store,
+              rating: store.rating || 0,
+              reviewCount: store.reviewCount || 0
+            };
+          }
+        })
+      );
+      
+      setStores(storesWithReviewData);
     } catch (error) {
       console.error('매장 목록 로드 실패:', error);
       setStores([]);
@@ -77,19 +121,16 @@ const MainPage = () => {
         <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>
           🍽️ 하이오더
         </Typography>
-        {userLocation && (
-          <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center' }}>
-            <LocationOn sx={{ fontSize: 16, mr: 0.5 }} />
-            현재 위치 기반 추천
-          </Typography>
-        )}
+        <Typography variant="body2" sx={{ opacity: 0.9 }}>
+          맛있는 식당을 찾아보세요
+        </Typography>
       </Box>
 
       <Box className="content-area">
-        {/* 검색바 */}
+        {/* 검색 */}
         <TextField
           fullWidth
-          placeholder="매장명으로 검색"
+          placeholder="매장명, 음식 종류 검색"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           InputProps={{
@@ -105,7 +146,7 @@ const MainPage = () => {
         {/* 태그 필터 */}
         <Box sx={{ mb: 3 }}>
           <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
-            취향 선택
+            카테고리
           </Typography>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
             {tags.map((tag) => (
@@ -133,9 +174,9 @@ const MainPage = () => {
         ) : (
           <Grid container spacing={2}>
             {stores.map((store) => (
-              <Grid item xs={12} key={store.id}>
+              <Grid item xs={12} key={store.id || store.storeId}>
                 <Card 
-                  onClick={() => handleStoreClick(store.storeId)}
+                  onClick={() => handleStoreClick(store.storeId || store.id)}
                   sx={{ cursor: 'pointer' }}
                 >
                   <CardContent>
@@ -146,7 +187,7 @@ const MainPage = () => {
                       />
                       <Box sx={{ flex: 1 }}>
                         <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                          {store.storeName}
+                          {store.storeName || store.name}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
                           {store.category} • {store.address}
@@ -154,7 +195,7 @@ const MainPage = () => {
                         <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
                           <Star sx={{ color: '#ffc107', fontSize: 16 }} />
                           <Typography variant="body2" sx={{ ml: 0.5 }}>
-                            {store.rating?.toFixed(1) || '0.0'} ({formatNumber(store.reviewCount)})
+                            {store.rating ? store.rating.toFixed(1) : '0.0'} ({formatNumber(store.reviewCount || 0)})
                           </Typography>
                         </Box>
                         {store.tags && (
