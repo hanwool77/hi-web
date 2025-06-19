@@ -42,8 +42,8 @@ const ExternalIntegration = () => {
       icon: '🟡',
       description: '카카오맵 리뷰',
       connected: true,
-      lastSync: '30분 전',
-      reviewCount: 18,
+      lastSync: null, // 하드코딩 제거
+      reviewCount: 0, // 하드코딩 제거
       status: 'connected',
       externalStoreId: storeId
     },
@@ -64,12 +64,30 @@ const ExternalIntegration = () => {
       icon: '🍽️',
       description: '하이오더 플랫폼',
       connected: true,
-      lastSync: '1시간 전',
-      reviewCount: 25,
+      lastSync: null, // 하드코딩 제거
+      reviewCount: 0, // 하드코딩 제거
       status: 'connected',
       externalStoreId: storeId
     }
   ];
+
+  // 동기화 시간을 상대적 시간으로 변환하는 함수
+  const getRelativeTime = (syncTime) => {
+    if (!syncTime) return null;
+    
+    const now = new Date();
+    const sync = new Date(syncTime);
+    const diffInMinutes = Math.floor((now - sync) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return '방금 전';
+    if (diffInMinutes < 60) return `${diffInMinutes}분 전`;
+    
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) return `${diffInHours}시간 전`;
+    
+    const diffInDays = Math.floor(diffInHours / 24);
+    return `${diffInDays}일 전`;
+  };
 
   useEffect(() => {
     if (selectedStoreId) {
@@ -150,7 +168,7 @@ const ExternalIntegration = () => {
     }
   };
 
-  // 개별 플랫폼 리뷰 동기화
+  // 개별 플랫폼 리뷰 동기화 - 수정된 부분
   const handleSyncReviews = async (platform) => {
     if (!selectedStoreId) {
       alert('매장을 선택해주세요.');
@@ -164,13 +182,32 @@ const ExternalIntegration = () => {
 
     try {
       setSyncing(true);
-      await externalService.syncReviews(
+      const response = await externalService.syncReviews(
         selectedStoreId, 
         platform.id, 
         platform.externalStoreId
       );
-      alert(`${platform.name} 리뷰 동기화가 완료되었습니다.`);
-      loadPlatformStatus();
+
+      // 동기화 성공 후 플랫폼 정보 업데이트
+      if (response.success && response.syncedCount !== undefined) {
+        const currentTime = new Date().toISOString();
+        
+        setPlatforms(prevPlatforms => 
+          prevPlatforms.map(p => 
+            p.id === platform.id 
+              ? { 
+                  ...p, 
+                  reviewCount: p.reviewCount + response.syncedCount, // 기존 리뷰 수에 동기화된 리뷰 수 추가
+                  lastSync: currentTime // 현재 시간으로 마지막 동기화 시간 업데이트
+                }
+              : p
+          )
+        );
+        
+        alert(`${platform.name} 리뷰 동기화가 완료되었습니다. (${response.syncedCount}개 동기화)`);
+      } else {
+        alert(`${platform.name} 리뷰 동기화가 완료되었습니다.`);
+      }
     } catch (error) {
       console.error('리뷰 동기화 실패:', error);
       alert('리뷰 동기화에 실패했습니다.');
@@ -180,7 +217,7 @@ const ExternalIntegration = () => {
     }
   };
 
-  // 모든 플랫폼 리뷰 동기화
+  // 모든 플랫폼 리뷰 동기화 - 수정된 부분
   const handleSyncAllReviews = async () => {
     if (!selectedStoreId) {
       alert('매장을 선택해주세요.');
@@ -195,9 +232,41 @@ const ExternalIntegration = () => {
 
     try {
       setSyncing(true);
-      await externalService.syncAllReviews(selectedStoreId);
-      alert('모든 플랫폼 리뷰 동기화가 완료되었습니다.');
-      loadPlatformStatus();
+      
+      // 각 연동된 플랫폼별로 개별 동기화 실행
+      let totalSyncedCount = 0;
+      const currentTime = new Date().toISOString();
+      
+      for (const platform of connectedPlatforms) {
+        try {
+          const response = await externalService.syncReviews(
+            selectedStoreId, 
+            platform.id, 
+            platform.externalStoreId
+          );
+          
+          if (response.success && response.syncedCount !== undefined) {
+            totalSyncedCount += response.syncedCount;
+            
+            // 각 플랫폼별 정보 업데이트
+            setPlatforms(prevPlatforms => 
+              prevPlatforms.map(p => 
+                p.id === platform.id 
+                  ? { 
+                      ...p, 
+                      reviewCount: p.reviewCount + response.syncedCount,
+                      lastSync: currentTime
+                    }
+                  : p
+              )
+            );
+          }
+        } catch (platformError) {
+          console.error(`${platform.name} 동기화 실패:`, platformError);
+        }
+      }
+      
+      alert(`모든 플랫폼 리뷰 동기화가 완료되었습니다. (총 ${totalSyncedCount}개 동기화)`);
     } catch (error) {
       console.error('전체 리뷰 동기화 실패:', error);
       alert('전체 리뷰 동기화에 실패했습니다.');
@@ -303,11 +372,11 @@ const ExternalIntegration = () => {
               {platform.connected && (
                 <Box sx={{ mb: 2 }}>
                   <Typography variant="body2" color="text.secondary">
-                    리뷰 수: {platform.reviewCount}개
+                    리뷰 수: {platform.reviewCount.toLocaleString()}개
                   </Typography>
                   {platform.lastSync && (
                     <Typography variant="body2" color="text.secondary">
-                      마지막 동기화: {platform.lastSync}
+                      마지막 동기화: {getRelativeTime(platform.lastSync)}
                     </Typography>
                   )}
                 </Box>
@@ -355,31 +424,30 @@ const ExternalIntegration = () => {
       <Dialog
         open={connectDialog.open}
         onClose={() => setConnectDialog({ open: false, platform: null })}
-        fullWidth
         maxWidth="sm"
+        fullWidth
       >
         <DialogTitle>
-          {connectDialog.platform?.name} 연동
+          {connectDialog.platform?.name} 계정 연동
         </DialogTitle>
         <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            {connectDialog.platform?.name} 계정 정보를 입력해주세요.
+          </Typography>
           <TextField
-            autoFocus
-            margin="dense"
-            label="아이디"
             fullWidth
-            variant="outlined"
+            label="아이디"
             value={credentials.username}
-            onChange={(e) => setCredentials({ ...credentials, username: e.target.value })}
-            sx={{ mb: 2 }}
+            onChange={(e) => setCredentials(prev => ({ ...prev, username: e.target.value }))}
+            margin="normal"
           />
           <TextField
-            margin="dense"
+            fullWidth
             label="비밀번호"
             type="password"
-            fullWidth
-            variant="outlined"
             value={credentials.password}
-            onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
+            onChange={(e) => setCredentials(prev => ({ ...prev, password: e.target.value }))}
+            margin="normal"
           />
         </DialogContent>
         <DialogActions>
@@ -392,7 +460,7 @@ const ExternalIntegration = () => {
         </DialogActions>
       </Dialog>
 
-      <Navigation activeTab="external" />
+      <Navigation currentPath="/external-integration" />
     </Box>
   );
 };
