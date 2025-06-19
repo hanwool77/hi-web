@@ -1,10 +1,13 @@
-# 하이오더 리뷰 피드백 시스템 🍽️
+# 리뷰 기반 AI 피드백 시스템 🍽️
 
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.0-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://openjdk.java.net/)
 [![React](https://img.shields.io/badge/React-18+-blue.svg)](https://reactjs.org/)
 [![Azure](https://img.shields.io/badge/Azure-Cloud-blue.svg)](https://azure.microsoft.com/)
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-1.30-blue?logo=kubernetes&logoColor=white)](https://kubernetes.io/)
+[![Docker](https://img.shields.io/badge/Docker-25.0-blue?logo=docker&logoColor=white)](https://www.docker.com/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 
 ## 📖 프로젝트 개요
 
@@ -28,32 +31,11 @@
 ## 🏗️ 시스템 아키텍처
 
 ### 마이크로서비스 구조
-```
-┌─────────────────┐  ┌─────────────────┐ 
-│   프론트엔드     │  │ Nginx Ingress     │  
-│   (React SPA)   │◄─┤   Controller    │
-└─────────────────┘  └─────────────────┘ 
-                              │
-        ┌─────────────────────┼─────────────────────┐
-        │                     │                     │
-┌───────▼──────┐    ┌─────────▼──────┐    ┌─────────▼──────┐
-│ 회원관리서비스 │    │ 매장운영서비스  │    │ 리뷰관리서비스  │
-│ (Member)     │    │ (Store)        │    │ (Review)       │
-└──────────────┘    └────┬───────────┘    └────────────────┘
-        │                │                         │
-        │                ▼                         │
-┌───────▼──────┐    ┌─────────▼──────┐    ┌─────────▼──────┐
-│ AI분석서비스  │    │  Azure Event   │    │ 취향추천서비스  │
-│ (Analytics)  │    │      Hub       │    │ (Recommend)    │
-└──────────────┘    └─────┬──────────┘    └────────────────┘
-                          │
-                   ┌──────▼──────┐
-                   │  외부 리뷰   │
-                   │  수집 서비스  │
-                   │ (네이버/카카오/│
-                   │   구글 API)  │
-                   └─────────────┘
-```
+![image](image/마이크로서비스아키텍쳐.png)
+
+### CI/CD 파이프라인
+
+![iamge2](image/CICD_파이프라인.png)
 
 ### 기술 스택
 
@@ -73,15 +55,13 @@
 #### 인프라 (Azure Cloud)
 - **Container**: Azure Kubernetes Service (AKS)
 - **Ingress**: Nginx Ingress Controller
-- **Authentication**: Azure AD B2C
 - **Messaging**: Azure Event Hub (외부 리뷰 수집)
 - **Storage**: Azure Blob Storage
-- **Monitoring**: Azure Monitor, Application Insights
-- **CI/CD**: Azure DevOps
+- **CI/CD**: Git Action, ArgoCD
 
 ## 🚀 주요 기능
 
-### 👥 고객 기능
+### 👥 고객 기능 
 - **취향 기반 음식점 추천**: AI가 분석한 개인 취향과 위치 기반 맞춤 추천
 - **영수증 리뷰 작성**: 영수증 인증을 통한 신뢰성 있는 리뷰 시스템
 - **리뷰 반응 및 댓글**: 다른 고객과의 소통을 통한 커뮤니티 형성
@@ -162,6 +142,7 @@ export REDIS_HOST=localhost
 export REDIS_PORT=6379
 export OPENAI_API_KEY=your_openai_api_key
 export AZURE_STORAGE_CONNECTION_STRING=your_azure_storage_connection
+export AZURE_EVENTHUB_CONNECTION_STRING=your_eventhub_connection
 ```
 
 3. **의존성 설치 및 빌드**
@@ -169,10 +150,9 @@ export AZURE_STORAGE_CONNECTION_STRING=your_azure_storage_connection
 ./gradlew clean build
 ```
 
-4. **데이터베이스 초기화**
+4. **Redis 초기화**
 ```bash
 docker-compose up -d postgres redis
-./gradlew flywayMigrate
 ```
 
 5. **서비스 실행**
@@ -252,10 +232,12 @@ az group create --name hiorder-feedback-rg --location koreacentral
 
 1. **AKS 클러스터 생성**
 ```bash
-cd infrastructure/terraform
-terraform init
-terraform plan
-terraform apply
+az aks create \
+  --resource-group hiorder-feedback-rg \
+  --name myAKSCluster \
+  --node-count 1 \
+  --generate-ssh-keys
+
 ```
 
 2. **kubectl 설정**
@@ -274,26 +256,10 @@ kubectl apply -f services/
 kubectl apply -f ingress/
 ```
 
-### 모니터링 설정
-
-1. **Application Insights 연결**
-```bash
-az monitor app-insights component create \
-  --app hiorder-insights \
-  --location koreacentral \
-  --resource-group hiorder-feedback-rg
-```
-
-2. **대시보드 접근**
-- Azure Portal에서 Application Insights 대시보드 확인
-- Grafana 대시보드: http://your-domain/grafana
-
 ## 📊 API 문서
 
 ### Swagger UI 접근
 - 로컬: http://localhost:8080/swagger-ui.html
-- 개발환경: https://dev-api.hiorder.com/swagger-ui.html
-- 운영환경: https://api.hiorder.com/swagger-ui.html
 
 ### Ingress 라우팅 구조
 ```
@@ -309,40 +275,8 @@ az monitor app-insights component create \
 ```
 
 ### 외부 리뷰 수집 아키텍처
-```
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│   네이버     │    │   카카오     │    │   구글      │
-│  리뷰 API   │    │  리뷰 API   │    │ 리뷰 API    │
-└──────┬──────┘    └──────┬──────┘    └──────┬──────┘
-       │                  │                  │
-       ▼                  ▼                  ▼
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│  네이버 수집  │    │  카카오 수집  │    │  구글 수집   │
-│ FastAPI 서버 │◄───┤ FastAPI 서버 │◄───┤ FastAPI 서버 │
-└──────┬──────┘    └──────┬──────┘    └──────┬──────┘
-       │                  │                  │
-       │    ┌─────────────┴──────────────────┘
-       │    │             API 호출로 수집 요청
-       ▼    ▼
-    ┌─────────────┐
-    │   Store     │
-    │  Service    │
-    │ (Spring)    │
-    └─────┬───────┘
-          │ 수집된 리뷰 데이터 발행
-          ▼
-    ┌─────────────┐
-    │   Azure     │
-    │ Event Hub   │
-    └─────┬───────┘
-          │ 이벤트 구독
-          ▼
-    ┌─────────────┐
-    │  Review     │
-    │ Service     │
-    │ (Spring)    │
-    └─────────────┘
-```
+
+![image](image/외뷰리뷰수집아키텍쳐.png)
 
 ### 주요 API 엔드포인트
 
@@ -379,17 +313,6 @@ GET /api/action-plans/stores/{storeId}        # 실행계획 목록
 POST /api/action-plans                        # 실행계획 저장
 ```
 
-## 🧪 테스트
-
-### API 테스트
-- api doc 사용하여 테스트 진행.
-
-## 🔒 보안
-
-### 인증 및 권한
-- JWT 토큰 기반 인증
-
-
 
 ## 📝 라이선스
 
@@ -399,9 +322,3 @@ POST /api/action-plans                        # 실행계획 저장
 
 ### 개발팀
 <img width="611" alt="Image" src="https://github.com/user-attachments/assets/93d764a0-b84e-4010-a314-486969c42b1d" />
-
----
-
-⭐ 이 프로젝트가 도움이 되셨다면 Star를 눌러주세요!
-
-**Made with ❤️ by KTDS Team**

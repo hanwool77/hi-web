@@ -1,4 +1,4 @@
-//* src/pages/owner/AIFeedbackDetail.js
+//* src/pages/owner/AIFeedbackDetail.js - AI추천사항 제거, 단점 분석 추가
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
@@ -25,7 +25,8 @@ import {
   TrendingUp,
   TrendingDown,
   Assessment,
-  PlayArrow
+  PlayArrow,
+  List as ListIcon
 } from '@mui/icons-material';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { analyticsService } from '../../services/analyticsService';
@@ -170,38 +171,48 @@ const AIFeedbackDetail = () => {
             setTimeout(() => reject(new Error('요청 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.')), 60000)
           )
         ]);
-
-        clearTimeout(timeoutId);
-        console.log('실행계획 생성 응답:', response);
         
+        clearTimeout(timeoutId);
+        
+        console.log('실행계획 생성 성공:', response);
+        
+        // 성공 메시지 설정 및 표시
         setSuccessMessage('실행계획이 성공적으로 생성되었습니다!');
         setShowSuccess(true);
-
-        // 1.5초 후 실행계획 목록으로 이동
-        setTimeout(() => {
-          navigate('/owner/action-plan/list');
-        }, 1500);
         
-        // 새로 선택된 항목들을 비활성화 목록에 추가
-        setDisabledImprovements(prev => [...prev, ...availableSelections]);
+        // 생성된 개선사항들을 비활성화 목록에 추가 (화면 새로고침 없이)
+        const newlyCreatedItems = selectedImprovements.filter(
+          improvement => !disabledImprovements.includes(improvement)
+        );
         
-      } catch (apiError) {
+        setDisabledImprovements(prev => [...prev, ...newlyCreatedItems]);
+        
+        console.log('새로 생성된 항목들:', newlyCreatedItems);
+        console.log('업데이트된 비활성화 목록:', [...disabledImprovements, ...newlyCreatedItems]);
+        
+      } catch (timeoutError) {
         clearTimeout(timeoutId);
-        throw apiError;
+        throw timeoutError;
       }
       
     } catch (error) {
       console.error('실행계획 생성 실패:', error);
-      console.error('에러 상세:', error.response?.data);
       
-      if (error.message === '요청 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.') {
-        alert('실행계획 생성에 시간이 오래 걸리고 있습니다.\n백그라운드에서 계속 처리중이니 잠시 후 페이지를 새로고침해주세요.');
+      if (error.message.includes('시간이 초과')) {
+        alert('실행계획 생성에 시간이 오래 걸리고 있습니다. 잠시 후 실행계획 목록에서 확인해주세요.');
       } else {
-        alert(`실행계획 생성에 실패했습니다: ${error.response?.data?.message || error.message || '다시 시도해주세요.'}`);
+        alert('실행계획 생성에 실패했습니다: ' + (error.response?.data?.message || error.message));
       }
     } finally {
       setActionPlanLoading(false);
     }
+  };
+
+  // 신뢰도에 따른 칩 색상
+  const getConfidenceColor = (score) => {
+    if (score >= 80) return 'success';
+    if (score >= 60) return 'warning';
+    return 'error';
   };
 
   // 감정 분석 차트 데이터
@@ -209,47 +220,32 @@ const AIFeedbackDetail = () => {
     if (!reviewAnalysis) return [];
     
     const data = [];
-    if (reviewAnalysis.positiveCount) {
-      data.push({ name: '긍정', value: reviewAnalysis.positiveCount, color: '#00C49F' });
+    if (reviewAnalysis.positiveCount > 0) {
+      data.push({ name: '긍정', value: reviewAnalysis.positiveCount, color: '#4caf50' });
     }
-    if (reviewAnalysis.neutralCount) {
-      data.push({ name: '중립', value: reviewAnalysis.neutralCount, color: '#FFBB28' });
+    if (reviewAnalysis.neutralCount > 0) {
+      data.push({ name: '중립', value: reviewAnalysis.neutralCount, color: '#ff9800' });
     }
-    if (reviewAnalysis.negativeCount) {
-      data.push({ name: '부정', value: reviewAnalysis.negativeCount, color: '#FF8042' });
+    if (reviewAnalysis.negativeCount > 0) {
+      data.push({ name: '부정', value: reviewAnalysis.negativeCount, color: '#f44336' });
     }
-    
     return data;
   };
 
   // 키워드 분석 차트 데이터
   const getKeywordChartData = () => {
-    if (!reviewAnalysis || !reviewAnalysis.keywords) return [];
+    if (!reviewAnalysis?.keywords) return [];
     
     return Object.entries(reviewAnalysis.keywords)
-      .map(([keyword, count]) => ({
-        keyword,
-        count
-      }))
+      .map(([keyword, count]) => ({ keyword, count }))
       .sort((a, b) => b.count - a.count)
-      .slice(0, 10); // 상위 10개만
-  };
-
-  const formatNumber = (num) => {
-    if (!num) return '0';
-    return new Intl.NumberFormat('ko-KR').format(num);
-  };
-
-  const getConfidenceColor = (score) => {
-    if (score >= 80) return 'success';
-    if (score >= 60) return 'warning';
-    return 'error';
+      .slice(0, 10);
   };
 
   if (loading) {
     return (
       <Box className="mobile-container">
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
           <CircularProgress />
           <Typography sx={{ mt: 2 }}>AI 피드백을 불러오는 중...</Typography>
         </Box>
@@ -332,8 +328,8 @@ const AIFeedbackDetail = () => {
                       primary={`${index + 1}. ${point}`}
                       sx={{ 
                         '& .MuiListItemText-primary': { 
-                          fontSize: '0.9rem',
-                          color: '#2e7d32'
+                          fontSize: '0.95rem',
+                          lineHeight: 1.5
                         }
                       }}
                     />
@@ -344,95 +340,31 @@ const AIFeedbackDetail = () => {
           </Card>
         )}
 
-        {/* 개선사항 */}
+        {/* 단점 분석 - 새로 추가 */}
         {aiFeedback?.improvementPoints && aiFeedback.improvementPoints.length > 0 && (
           <Card sx={{ mb: 3 }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <TrendingDown sx={{ fontSize: 24, color: '#f57c00', mr: 1 }} />
+                <TrendingDown sx={{ fontSize: 24, color: '#f44336', mr: 1 }} />
                 <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                  개선사항
+                  단점 분석
                 </Typography>
               </Box>
-              
-              <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
-                개선하고 싶은 항목을 선택하여 실행계획을 생성할 수 있습니다.
-              </Typography>
-
-              <Box sx={{ mb: 3 }}>
-                {aiFeedback.improvementPoints.map((improvement, index) => {
-                  const isDisabled = disabledImprovements.includes(improvement);
-                  const isChecked = selectedImprovements.includes(improvement);
-                  
-                  return (
-                    <FormControlLabel
-                      key={index}
-                      control={
-                        <Checkbox
-                          checked={isChecked}
-                          onChange={(e) => handleImprovementChange(improvement, e.target.checked)}
-                          disabled={isDisabled}
-                        />
-                      }
-                      label={`${improvement} ${isDisabled ? '(실행계획 존재)' : ''}`}
+              <List dense>
+                {aiFeedback.improvementPoints.map((point, index) => (
+                  <ListItem key={index} sx={{ px: 0 }}>
+                    <ListItemText 
+                      primary={`${index + 1}. ${point}`}
                       sx={{ 
-                        display: 'block',
-                        mb: 1,
-                        opacity: isDisabled ? 0.6 : 1
+                        '& .MuiListItemText-primary': { 
+                          fontSize: '0.95rem',
+                          lineHeight: 1.5
+                        }
                       }}
                     />
-                  );
-                })}
-              </Box>
-
-              {/* 실행계획 생성 버튼 */}
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={actionPlanLoading ? <CircularProgress size={16} color="inherit" /> : <PlayArrow />}
-                onClick={handleGenerateActionPlan}
-                disabled={
-                  selectedImprovements.filter(item => !disabledImprovements.includes(item)).length === 0 || 
-                  actionPlanLoading ||
-                  (!feedbackId && !aiFeedback?.id && !aiFeedback?.feedbackId)
-                }
-                fullWidth
-                sx={{ mt: 2 }}
-              >
-                {actionPlanLoading ? (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <span>실행계획 생성 중...</span>
-                    <Typography variant="caption">(최대 60초 소요)</Typography>
-                  </Box>
-                ) : (
-                  '실행계획 생성'
-                )}
-              </Button>
-
-              {/* 실행계획 목록으로 가는 버튼 추가 */}
-              <Button
-                variant="outlined"
-                color="primary"
-                startIcon={<Assessment />}
-                onClick={() => navigate('/owner/action-plan/list')}
-                fullWidth
-                sx={{ mt: 1 }}
-              >
-                실행계획 목록 보기
-              </Button>
-              
-              {selectedImprovements.filter(item => !disabledImprovements.includes(item)).length > 0 && (
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1, textAlign: 'center' }}>
-                  {selectedImprovements.filter(item => !disabledImprovements.includes(item)).length}개 새로운 항목이 선택됨
-                </Typography>
-              )}
-
-              {/* 기존 실행계획 정보 표시 */}
-              {disabledImprovements.length > 0 && (
-                <Typography variant="body2" color="success.main" sx={{ mt: 1, textAlign: 'center' }}>
-                  {disabledImprovements.length}개 항목은 이미 실행계획이 있습니다
-                </Typography>
-              )}
+                  </ListItem>
+                ))}
+              </List>
             </CardContent>
           </Card>
         )}
@@ -497,47 +429,95 @@ const AIFeedbackDetail = () => {
           </Card>
         )}
 
-        {/* 추천사항 */}
-        {aiFeedback?.recommendations && aiFeedback.recommendations.length > 0 && (
+        {/* 개선사항 선택 및 실행계획 생성 */}
+        {aiFeedback?.improvementPoints && aiFeedback.improvementPoints.length > 0 && (
           <Card sx={{ mb: 3 }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <Assessment sx={{ fontSize: 24, color: '#1976d2', mr: 1 }} />
                 <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                  AI 추천사항
+                  개선사항
                 </Typography>
               </Box>
-              <List dense>
-                {aiFeedback.recommendations.map((recommendation, index) => (
-                  <ListItem key={index} sx={{ px: 0 }}>
-                    <ListItemText 
-                      primary={`${index + 1}. ${recommendation}`}
-                      sx={{ 
-                        '& .MuiListItemText-primary': { 
-                          fontSize: '0.9rem',
-                          color: '#1565c0'
-                        }
-                      }}
-                    />
-                  </ListItem>
-                ))}
-              </List>
+              
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                실행계획을 생성할 개선사항을 선택해주세요:
+              </Typography>
+              
+              {aiFeedback.improvementPoints.map((improvement, index) => {
+                const isDisabled = disabledImprovements.includes(improvement);
+                const isChecked = selectedImprovements.includes(improvement);
+                
+                return (
+                  <FormControlLabel
+                    key={index}
+                    labelPlacement="start"
+                    control={
+                      <Checkbox
+                        checked={isChecked}
+                        onChange={(e) => handleImprovementChange(improvement, e.target.checked)}
+                        disabled={isDisabled}
+                      />
+                    }
+                    label={
+                      <Box>
+                        <Typography variant="body2">
+                          {improvement}
+                          {isDisabled && (
+                            <Chip 
+                              label="이미 생성됨" 
+                              size="small" 
+                              color="default" 
+                              sx={{ ml: 1, fontSize: '0.7rem' }}
+                            />
+                          )}
+                        </Typography>
+                      </Box>
+                    }
+                    sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      mb: 1,
+                      opacity: isDisabled ? 0.6 : 1,
+                      width: '100%'
+                    }}
+                  />
+                );
+              })}
+              
+              <Button
+                fullWidth
+                variant="contained"
+                startIcon={actionPlanLoading ? <CircularProgress size={20} /> : <PlayArrow />}
+                onClick={handleGenerateActionPlan}
+                disabled={actionPlanLoading || selectedImprovements.filter(item => !disabledImprovements.includes(item)).length === 0}
+                sx={{ mt: 2 }}
+              >
+                {actionPlanLoading ? '실행계획 생성 중...' : '선택한 개선사항으로 실행계획 생성'}
+              </Button>
+              
+              <Button
+                fullWidth
+                variant="outlined"
+                startIcon={<ListIcon />}
+                onClick={() => navigate('/owner/action-plan/list')}
+                sx={{ mt: 2 }}
+              >
+                실행계획 목록 보기
+              </Button>
             </CardContent>
           </Card>
         )}
       </Box>
 
-      {/* 성공 메시지 스낵바 */}
+      {/* 성공 스낵바 */}
       <Snackbar
         open={showSuccess}
-        autoHideDuration={1500}
+        autoHideDuration={6000}
         onClose={() => setShowSuccess(false)}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-      >
-        <Alert severity="success" onClose={() => setShowSuccess(false)}>
-          {successMessage}
-        </Alert>
-      </Snackbar>
+        message={successMessage}
+      />
       
       <OwnerNavigation />
     </Box>

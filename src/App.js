@@ -1,4 +1,4 @@
-//* src/App.js - AIFeedbackDetail 라우트 feedbackId 파라미터 추가
+//* src/App.js - 고객 라우팅 추가
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
@@ -35,13 +35,10 @@ import OwnerMyPage from './pages/owner/OwnerMyPage';
 // Customer Pages  
 import MainPage from './pages/customer/MainPage';
 import StoreDetail from './pages/customer/StoreDetail';
-import Profile from './pages/customer/Profile';
-// import CustomerMyPage from './pages/customer/CustomerMyPage'; // 파일이 존재하지 않음
 import PreferenceSettings from './pages/customer/PreferenceSettings';
 import MyPage from './pages/customer/MyPage';
-
-// Common Pages
-// import NotFound from './pages/NotFound'; // 파일이 존재하지 않음
+import MyReviews from './pages/customer/MyReviews';
+import CustomerProfileEdit from './pages/customer/CustomerProfileEdit';
 
 // MUI 테마 설정
 const theme = createTheme({
@@ -79,7 +76,7 @@ function App() {
                 </PublicRoute>
               } />
 
-              {/* Customer Routes - requiredRole을 "USER"로 수정 */}
+              {/* Customer Routes */}
               <Route path="/customer/main" element={
                 <ProtectedRoute requiredRole="USER">
                   <MainPage />
@@ -95,11 +92,6 @@ function App() {
                   <MyPage />
                 </ProtectedRoute>
               } />
-              <Route path="/customer/profile" element={
-                <ProtectedRoute requiredRole="USER">
-                  <Profile />
-                </ProtectedRoute>
-              } />
               <Route path="/customer/store/:storeId" element={
                 <ProtectedRoute requiredRole="USER">
                   <StoreDetail />
@@ -108,6 +100,16 @@ function App() {
               <Route path="/customer/preferences" element={
                 <ProtectedRoute requiredRole="USER">
                   <PreferenceSettings />
+                </ProtectedRoute>
+              } />
+              <Route path="/customer/my-reviews" element={
+                <ProtectedRoute requiredRole="USER">
+                  <MyReviews />
+                </ProtectedRoute>
+              } />
+              <Route path="/customer/profile-edit" element={
+                <ProtectedRoute requiredRole="USER">
+                  <CustomerProfileEdit />
                 </ProtectedRoute>
               } />
 
@@ -127,13 +129,11 @@ function App() {
                   <AIFeedback />
                 </ProtectedRoute>
               } />
-              {/* feedbackId 파라미터 추가 */}
               <Route path="/owner/ai-feedback/detail/:feedbackId" element={
                 <ProtectedRoute requiredRole="OWNER">
                   <AIFeedbackDetail />
                 </ProtectedRoute>
               } />
-              {/* 기존 라우트도 유지 (하위 호환성) */}
               <Route path="/owner/ai-feedback/detail" element={
                 <ProtectedRoute requiredRole="OWNER">
                   <AIFeedbackDetail />
@@ -205,9 +205,7 @@ function App() {
                 </ProtectedRoute>
               } />
 
-              {/* 404 Page - NotFound 컴포넌트가 존재하지 않아 주석처리
-              <Route path="*" element={<NotFound />} />
-              */}
+              {/* 404 Page */}
               <Route path="*" element={<div>404 - Page Not Found</div>} />
             </Routes>
           </Router>
