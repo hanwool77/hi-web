@@ -172,7 +172,9 @@ const MainPage = () => {
 
   // 매장 상세로 이동
   const handleStoreClick = (storeId) => {
-    navigate(`/store/${storeId}`);
+    console.log('🏪 매장 클릭:', storeId);
+    console.log('🚀 이동할 경로:', `/customer/store/${storeId}`);
+    navigate(`/customer/store/${storeId}`);
   };
 
   // 전체 매장 목록 조회 함수
