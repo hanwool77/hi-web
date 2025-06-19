@@ -330,36 +330,11 @@ const AIFeedbackDetail = () => {
                   <ListItem key={index} sx={{ px: 0 }}>
                     <ListItemText 
                       primary={`${index + 1}. ${point}`}
-                      primaryTypographyProps={{
-                        variant: 'body2',
-                        sx: { lineHeight: 1.5 }
-                      }}
-                    />
-                  </ListItem>
-                ))}
-              </List>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* 단점 분석 (신규 추가) */}
-        {aiFeedback?.negativePoints && aiFeedback.negativePoints.length > 0 && (
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <TrendingDown sx={{ fontSize: 24, color: '#f44336', mr: 1 }} />
-                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                  단점 분석
-                </Typography>
-              </Box>
-              <List dense>
-                {aiFeedback.negativePoints.map((point, index) => (
-                  <ListItem key={index} sx={{ px: 0 }}>
-                    <ListItemText 
-                      primary={`${index + 1}. ${point}`}
-                      primaryTypographyProps={{
-                        variant: 'body2',
-                        sx: { lineHeight: 1.5 }
+                      sx={{ 
+                        '& .MuiListItemText-primary': { 
+                          fontSize: '0.9rem',
+                          color: '#2e7d32'
+                        }
                       }}
                     />
                   </ListItem>
@@ -374,32 +349,32 @@ const AIFeedbackDetail = () => {
           <Card sx={{ mb: 3 }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Assessment sx={{ fontSize: 24, color: '#2196f3', mr: 1 }} />
+                <TrendingDown sx={{ fontSize: 24, color: '#f57c00', mr: 1 }} />
                 <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
                   개선사항
                 </Typography>
               </Box>
               
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                실행계획을 생성할 개선사항을 선택하세요:
+              <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
+                개선하고 싶은 항목을 선택하여 실행계획을 생성할 수 있습니다.
               </Typography>
 
-              <Box sx={{ mb: 2 }}>
+              <Box sx={{ mb: 3 }}>
                 {aiFeedback.improvementPoints.map((improvement, index) => {
                   const isDisabled = disabledImprovements.includes(improvement);
-                  const isSelected = selectedImprovements.includes(improvement);
+                  const isChecked = selectedImprovements.includes(improvement);
                   
                   return (
                     <FormControlLabel
                       key={index}
                       control={
                         <Checkbox
-                          checked={isSelected}
+                          checked={isChecked}
                           onChange={(e) => handleImprovementChange(improvement, e.target.checked)}
                           disabled={isDisabled}
                         />
                       }
-                      label={`${index + 1}. ${improvement} ${isDisabled ? '(실행계획 존재)' : ''}`}
+                      label={`${improvement} ${isDisabled ? '(실행계획 존재)' : ''}`}
                       sx={{ 
                         display: 'block',
                         mb: 1,
@@ -433,6 +408,18 @@ const AIFeedbackDetail = () => {
                   '실행계획 생성'
                 )}
               </Button>
+
+              {/* 실행계획 목록으로 가는 버튼 추가 */}
+              <Button
+                variant="outlined"
+                color="primary"
+                startIcon={<Assessment />}
+                onClick={() => navigate('/owner/action-plan/list')}
+                fullWidth
+                sx={{ mt: 1 }}
+              >
+                실행계획 목록 보기
+              </Button>
               
               {selectedImprovements.filter(item => !disabledImprovements.includes(item)).length > 0 && (
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1, textAlign: 'center' }}>
@@ -455,25 +442,26 @@ const AIFeedbackDetail = () => {
           <Card sx={{ mb: 3 }}>
             <CardContent>
               <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
-                감정 분석 차트
+                감정 분석
               </Typography>
-              <Box sx={{ height: 300 }}>
+              <Box sx={{ height: 250 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={getSentimentChartData()}
                       cx="50%"
                       cy="50%"
-                      innerRadius={40}
+                      labelLine={false}
+                      label={({ name, value, percent }) => `${name}: ${value}개 (${(percent * 100).toFixed(0)}%)`}
                       outerRadius={80}
-                      paddingAngle={5}
+                      fill="#8884d8"
                       dataKey="value"
                     >
                       {getSentimentChartData().map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value) => [formatNumber(value), '개']} />
+                    <Tooltip />
                   </PieChart>
                 </ResponsiveContainer>
               </Box>
@@ -486,22 +474,15 @@ const AIFeedbackDetail = () => {
           <Card sx={{ mb: 3 }}>
             <CardContent>
               <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
-                키워드 분석
+                주요 키워드 분석
               </Typography>
               <Box sx={{ height: 300 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={getKeywordChartData()}
-                    margin={{
-                      top: 5,
-                      right: 30,
-                      left: 20,
-                      bottom: 80
-                    }}
-                  >
+                  <BarChart data={getKeywordChartData()}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis 
                       dataKey="keyword" 
+                      tick={{ fontSize: 12 }}
                       angle={-45}
                       textAnchor="end"
                       height={80}
@@ -515,7 +496,48 @@ const AIFeedbackDetail = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* 추천사항 */}
+        {aiFeedback?.recommendations && aiFeedback.recommendations.length > 0 && (
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Assessment sx={{ fontSize: 24, color: '#1976d2', mr: 1 }} />
+                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                  AI 추천사항
+                </Typography>
+              </Box>
+              <List dense>
+                {aiFeedback.recommendations.map((recommendation, index) => (
+                  <ListItem key={index} sx={{ px: 0 }}>
+                    <ListItemText 
+                      primary={`${index + 1}. ${recommendation}`}
+                      sx={{ 
+                        '& .MuiListItemText-primary': { 
+                          fontSize: '0.9rem',
+                          color: '#1565c0'
+                        }
+                      }}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            </CardContent>
+          </Card>
+        )}
       </Box>
+
+      {/* 성공 메시지 스낵바 */}
+      <Snackbar
+        open={showSuccess}
+        autoHideDuration={1500}
+        onClose={() => setShowSuccess(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert severity="success" onClose={() => setShowSuccess(false)}>
+          {successMessage}
+        </Alert>
+      </Snackbar>
       
       <OwnerNavigation />
     </Box>
