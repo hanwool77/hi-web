@@ -146,7 +146,7 @@ const MainPage = () => {
                       />
                       <Box sx={{ flex: 1 }}>
                         <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                          {store.name}
+                          {store.storeName}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
                           {store.category} • {store.address}
