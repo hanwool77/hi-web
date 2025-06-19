@@ -16,7 +16,7 @@ const Register = () => {
     confirmPassword: '',
     nickname: '',
     phone: '',
-    role: 'CUSTOMER'
+    role: 'USER'
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -131,7 +131,7 @@ const Register = () => {
                   onChange={handleChange}
                   label="회원 유형"
                 >
-                  <MenuItem value="CUSTOMER">고객</MenuItem>
+                  <MenuItem value="USER">고객</MenuItem>
                   <MenuItem value="OWNER">점주</MenuItem>
                 </Select>
               </FormControl>
