@@ -19,12 +19,12 @@
 - **리뷰 시각화**: 고객 리뷰를 시각화하여 객관적 분석 지원
 
 ### 🌀 MVP 산출물
-- 발표자료:
+- 발표자료: https://gamma.app/docs/Untitled-a8wmqvkzc2db6oi
 - Git Repo: 
   - 프론트엔드: https://gitea.cbiz.kubepia.net/dg04-hi/hi-web.git
   - 벡엔드: https://gitea.cbiz.kubepia.net/dg04-hi/hi-backend.git
   - manifest: https://gitea.cbiz.kubepia.net/dg04-hi/hi-manifest.git
-- 시연 동영상:
+- 시연 동영상: https://youtube.com/shorts/OpG_APm_jZM
 
 
 
