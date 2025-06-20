@@ -1,3 +1,4 @@
+//* src/pages/customer/MyPage.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -26,19 +27,19 @@ const MyPage = () => {
       icon: <Assignment />,
       title: '내 리뷰',
       description: '작성한 리뷰 확인 및 관리',
-      onClick: () => navigate('/customer/my-reviews')
+      onClick: () => navigate('/customer/my-reviews') // ✅ 실제 페이지로 이동
     },
     {
       icon: <Person />,
       title: '프로필 수정',
       description: '닉네임, 개인정보 변경',
-      onClick: () => navigate('/customer/profile-edit')
+      onClick: () => navigate('/customer/profile-edit') // ✅ 실제 페이지로 이동
     },
     {
       icon: <Settings />,
       title: '취향 설정',
       description: '음식 취향 및 선호도 설정',
-      onClick: () => navigate('/customer/preferences')
+      onClick: () => navigate('/customer/preferences') // ✅ 실제 페이지로 이동
     }
   ];
 
