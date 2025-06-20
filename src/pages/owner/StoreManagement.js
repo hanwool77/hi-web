@@ -245,7 +245,7 @@ const StoreManagement = () => {
                   </Typography>
                 </Box>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  최근 30일간의 데이터를 바탕으로 AI 분석과 실행계획을 생성합니다.
+                  최근 30일간의 데이터를 바탕으로 AI 분석을 생성합니다.
                 </Typography>
                 <Button 
                   variant="contained" 
