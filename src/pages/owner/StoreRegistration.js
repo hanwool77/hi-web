@@ -39,72 +39,69 @@ const StoreRegistration = () => {
   }, []);
 
   const loadTags = async () => {
-    try {
-      setTagsLoading(true);
-      console.log('태그 목록 로딩 시작...');
-      
-      const response = await storeService.getAllTags();
-      console.log('태그 API 응답 전체:', response);
-      
-      // API 응답 구조 분석
-      let tags = [];
-      if (response && response.data && Array.isArray(response.data)) {
-        tags = response.data;
-      } else if (response && Array.isArray(response)) {
-        tags = response;
-      } else {
-        console.warn('예상하지 못한 태그 응답 구조:', response);
-        tags = [];
-      }
-      
-      console.log('처리된 태그 목록:', tags);
-      setAvailableTags(tags);
-      
-      // 카테고리별로 태그 그룹화
-      const groupedTags = tags.reduce((acc, tag) => {
-        const category = tag.tagCategory || '기타';
-        if (!acc[category]) {
-          acc[category] = [];
-        }
-        acc[category].push(tag);
-        return acc;
-      }, {});
-      
-      console.log('카테고리별 태그:', groupedTags);
-      setTagsByCategory(groupedTags);
-      
-    } catch (error) {
-      console.error('태그 목록 로드 실패:', error);
-      setError('태그 목록을 불러오는데 실패했습니다. 기본 태그를 사용합니다.');
-      
-      // 에러 시 기본 태그 사용 (fallback)
-      const defaultTags = [
-        { tagName: '한식', tagCategory: 'FOOD' },
-        { tagName: '양식', tagCategory: 'FOOD' },
-        { tagName: '일식', tagCategory: 'FOOD' },
-        { tagName: '중식', tagCategory: 'FOOD' },
-        { tagName: '비건', tagCategory: 'DIETARY' },
-        { tagName: '할랄', tagCategory: 'DIETARY' },
-        { tagName: '혼밥', tagCategory: 'ATMOSPHERE' },
-        { tagName: '반려동물 동반', tagCategory: 'ATMOSPHERE' },
-        { tagName: '청결인증', tagCategory: 'CERTIFICATION' }
-      ];
-      setAvailableTags(defaultTags);
-      
-      const groupedDefaultTags = defaultTags.reduce((acc, tag) => {
-        const category = tag.tagCategory || '기타';
-        if (!acc[category]) {
-          acc[category] = [];
-        }
-        acc[category].push(tag);
-        return acc;
-      }, {});
-      setTagsByCategory(groupedDefaultTags);
-      
-    } finally {
-      setTagsLoading(false);
+  try {
+    setTagsLoading(true);
+    console.log('🏷️ 태그 목록 로딩 시작...');
+    
+    const response = await storeService.getAvailableTags();
+    console.log('✅ 태그 목록 API 응답:', response);
+    
+    // ApiResponse 구조: { success: true, data: [...] }
+    const tags = response.data || [];
+    console.log('📋 태그 목록 (총 ' + tags.length + '개):', tags);
+    
+    if (tags.length === 0) {
+      console.warn('⚠️ 태그 목록이 비어있습니다. 기본 태그를 사용합니다.');
+      throw new Error('태그 목록이 비어있습니다.');
     }
-  };
+    
+    setAvailableTags(tags);
+    
+    // 카테고리별로 그룹화
+    const groupedTags = tags.reduce((acc, tag) => {
+      const category = tag.tagCategory || '기타';
+      if (!acc[category]) {
+        acc[category] = [];
+      }
+      acc[category].push(tag);
+      return acc;
+    }, {});
+    
+    console.log('📂 카테고리별 태그 그룹:', groupedTags);
+    setTagsByCategory(groupedTags);
+    
+  } catch (error) {
+    console.error('❌ 태그 목록 로드 실패:', error);
+    console.log('매장 등록에서 태그 목록을 불러오는데 실패했습니다. 기본 태그를 사용합니다.');
+    
+    // 에러 시 기본 태그 사용 (fallback)
+    const defaultTags = [
+      { tagName: '한식', tagCategory: 'FOOD' },
+      { tagName: '양식', tagCategory: 'FOOD' },
+      { tagName: '일식', tagCategory: 'FOOD' },
+      { tagName: '중식', tagCategory: 'FOOD' },
+      { tagName: '비건', tagCategory: 'DIETARY' },
+      { tagName: '할랄', tagCategory: 'DIETARY' },
+      { tagName: '혼밥', tagCategory: 'ATMOSPHERE' },
+      { tagName: '반려동물 동반', tagCategory: 'ATMOSPHERE' },
+      { tagName: '청결인증', tagCategory: 'CERTIFICATION' }
+    ];
+    setAvailableTags(defaultTags);
+    
+    const groupedDefaultTags = defaultTags.reduce((acc, tag) => {
+      const category = tag.tagCategory || '기타';
+      if (!acc[category]) {
+        acc[category] = [];
+      }
+      acc[category].push(tag);
+      return acc;
+    }, {});
+    setTagsByCategory(groupedDefaultTags);
+    
+  } finally {
+    setTagsLoading(false);
+  }
+};
 
   const handleChange = (e) => {
     setFormData({

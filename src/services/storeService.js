@@ -68,6 +68,18 @@ export const storeService = {
     }
   },
 
+  getAvailableTags: async () => {
+    try {
+      console.log('🏷️ 사용 가능한 태그 목록 API 호출 시작...');
+      const response = await storeApi.get('/api/stores/tags');
+      console.log('✅ 사용 가능한 태그 목록 API 응답:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ 사용 가능한 태그 목록 조회 실패:', error);
+      throw error;
+    }
+  },
+
   // 매장명으로 검색 - 백엔드 API와 일치 ⭐
   searchStoresByName: async (storeName) => {
     try {
