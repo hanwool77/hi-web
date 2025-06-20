@@ -1,0 +1,73 @@
+<svg viewBox="0 0 380 140" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- 네온 그라디언트 -->
+    <linearGradient id="neonGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366F1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#EC4899;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- 글로우 효과 -->
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- 배경 그라디언트 -->
+    <radialGradient id="bgGlow">
+      <stop offset="0%" style="stop-color:#6366F1;stop-opacity:0.1" />
+      <stop offset="100%" style="stop-color:#EC4899;stop-opacity:0" />
+    </radialGradient>
+  </defs>
+  
+  <!-- 배경 글로우 -->
+  <ellipse cx="190" cy="70" rx="180" ry="60" fill="url(#bgGlow)"/>
+  
+  <!-- 로고 컨테이너 -->
+  <g transform="translate(40, 40)">
+    <!-- 아이콘 프레임 -->
+    <rect x="0" y="-15" width="60" height="60" rx="15" fill="none" stroke="url(#neonGrad)" 
+          stroke-width="2" filter="url(#glow)"/>
+    
+    <!-- 내부 아이콘 -->
+    <g transform="translate(30, 15)">
+      <!-- 차트 바 -->
+      <rect x="-15" y="-6" width="4" height="14" fill="url(#neonGrad)" opacity="0.8"/>
+      <rect x="-8" y="-10" width="4" height="18" fill="url(#neonGrad)"/>
+      <rect x="-1" y="-8" width="4" height="16" fill="url(#neonGrad)" opacity="0.8"/>
+      <rect x="6" y="-12" width="4" height="20" fill="url(#neonGrad)"/>
+      
+      <!-- 피드백 도트 -->
+      <circle cx="15" cy="-15" r="3" fill="#EC4899" filter="url(#glow)">
+        <animate attributeName="opacity" values="0.5;1;0.5" dur="2s" repeatCount="indefinite"/>
+      </circle>
+    </g>
+  </g>
+  
+  <!-- 메인 텍스트 -->
+  <g transform="translate(120, 55)">
+    <text x="0" y="0" font-family="'Outfit', sans-serif" font-size="42" font-weight="200" 
+          fill="#1E293B" letter-spacing="-1">Hi</text>
+    <text x="40" y="0" font-family="'Outfit', sans-serif" font-size="42" font-weight="600" 
+          fill="url(#neonGrad)" letter-spacing="-1">SOFI</text>
+  </g>
+  
+  <!-- 한글 설명 -->
+  <g transform="translate(120, 80)">
+    <text x="0" y="0" font-family="'Pretendard', sans-serif" font-size="13" fill="#64748B" font-weight="400">
+      소상공인 피드백 인사이트 플랫폼
+    </text>
+  </g>
+  
+  <!-- 장식 라인 -->
+  <line x1="120" y1="95" x2="270" y2="95" stroke="url(#neonGrad)" stroke-width="1" opacity="0.3"/>
+  
+  <!-- 하이팀 서명 -->
+  <g transform="translate(320, 110)">
+    <text x="0" y="0" font-family="'Pretendard', sans-serif" font-size="11" fill="#94A3B8" font-weight="500">
+      by 하이팀
+    </text>
+  </g>
+</svg>
